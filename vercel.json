@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://rgenfvgnclglsetsqnke.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJnZW5mdmduY2xnbHNldHNxbmtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwMjk3OTgsImV4cCI6MjA2MjYwNTc5OH0.YAJnf-oLX9np9J0aO1gK5OdGPcnKk0AzPgjM62u7dwU",
+    "NEXT_PUBLIC_GEMINI_API_KEY": "AIzaSyAZ9EwR1eEpj4CyS4OrjpY8MMQ93C2iiQw"
+  }
+}
