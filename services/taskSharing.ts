@@ -158,15 +158,51 @@ export const respondToTaskShare = async (
   response: 'accepted' | 'rejected'
 ): Promise<void> => {
   try {
+    console.log(`Responding to task share ${taskShareId} with ${response}`);
+
+    // First, check if the user is authenticated
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('No authenticated user found');
+      throw new Error('User not authenticated');
+    }
+
+    console.log('Authenticated user ID:', user.id);
+
+    // Verify the task share belongs to the current user
+    const { data: share, error: fetchError } = await supabase
+      .from('task_shares')
+      .select('*')
+      .eq('id', taskShareId)
+      .eq('shared_with_id', user.id)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching task share:', fetchError);
+      throw fetchError;
+    }
+
+    if (!share) {
+      console.error('Task share not found or not accessible');
+      throw new Error('Task share not found or not accessible');
+    }
+
+    // Update the task share status
     const { error } = await supabase
       .from('task_shares')
       .update({
         status: response,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', taskShareId);
+      .eq('id', taskShareId)
+      .eq('shared_with_id', user.id);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error updating task share status:', error);
+      throw error;
+    }
+
+    console.log('Task share status updated successfully');
   } catch (error) {
     console.error('Error responding to task share:', error);
     throw error;
@@ -178,6 +214,18 @@ export const respondToTaskShare = async (
  */
 export const getTasksSharedWithMe = async (): Promise<Task[]> => {
   try {
+    console.log('Fetching tasks shared with me...');
+
+    // First, check if the user is authenticated
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('No authenticated user found');
+      return [];
+    }
+
+    console.log('Authenticated user ID:', user.id);
+
+    // Get tasks shared with the current user
     const { data: shares, error: sharesError } = await supabase
       .from('task_shares')
       .select(`
@@ -187,9 +235,15 @@ export const getTasksSharedWithMe = async (): Promise<Task[]> => {
         status,
         profiles:owner_id (email, name)
       `)
+      .eq('shared_with_id', user.id)
       .eq('status', 'accepted');
 
-    if (sharesError) throw sharesError;
+    if (sharesError) {
+      console.error('Error fetching shared tasks:', sharesError);
+      throw sharesError;
+    }
+
+    console.log('Shared tasks found:', shares?.length || 0);
 
     if (!shares || shares.length === 0) {
       return [];
@@ -197,12 +251,17 @@ export const getTasksSharedWithMe = async (): Promise<Task[]> => {
 
     // Get the actual tasks
     const taskIds = shares.map((share) => share.task_id);
+    console.log('Fetching task details for IDs:', taskIds);
+
     const { data: tasks, error: tasksError } = await supabase
       .from('tasks')
       .select('*')
       .in('id', taskIds);
 
-    if (tasksError) throw tasksError;
+    if (tasksError) {
+      console.error('Error fetching task details:', tasksError);
+      throw tasksError;
+    }
 
     // Add sharing information to each task
     return tasks.map((task) => {
@@ -231,6 +290,18 @@ export const getTasksSharedWithMe = async (): Promise<Task[]> => {
  */
 export const getPendingTaskShares = async (): Promise<TaskShare[]> => {
   try {
+    console.log('Fetching pending task shares...');
+
+    // First, check if the user is authenticated
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('No authenticated user found');
+      return [];
+    }
+
+    console.log('Authenticated user ID:', user.id);
+
+    // Get pending task shares for the current user
     const { data, error } = await supabase
       .from('task_shares')
       .select(`
@@ -245,9 +316,15 @@ export const getPendingTaskShares = async (): Promise<TaskShare[]> => {
         tasks:task_id (title, description),
         profiles:owner_id (email, name)
       `)
+      .eq('shared_with_id', user.id)
       .eq('status', 'pending');
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching pending task shares:', error);
+      throw error;
+    }
+
+    console.log('Pending task shares found:', data?.length || 0);
 
     // Make sure we handle the nested objects properly
     return (data || []).map(share => {
