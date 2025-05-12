@@ -76,7 +76,9 @@ export default function Calendar() {
     // Redirect to Google OAuth flow
     // This URL should be configured in your Google Cloud Console
     const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
-    const REDIRECT_URI = `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/api/calendar/callback`;
+    const REDIRECT_URI = process.env.NEXT_PUBLIC_SITE_URL
+      ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/calendar/callback`
+      : `${window.location.origin}/api/calendar/callback`;
     const SCOPES = encodeURIComponent('https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events');
 
     window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${SCOPES}&access_type=offline&prompt=consent`;
