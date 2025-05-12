@@ -82,12 +82,16 @@ export const getTaskShares = async (taskId: string): Promise<SharedUser[]> => {
     if (error) throw error;
 
     // Transform the data to match the SharedUser interface
-    return shares.map((share) => {
-      const profile = share.profiles || {};
+    return (shares || []).map((share) => {
+      // Ensure profiles is an object, not an array
+      const profile = typeof share.profiles === 'object' && share.profiles !== null
+        ? share.profiles
+        : {};
+
       return {
         id: share.shared_with_id,
-        email: profile.email || '',
-        name: profile.name,
+        email: typeof profile.email === 'string' ? profile.email : '',
+        name: typeof profile.name === 'string' ? profile.name : undefined,
         permission_level: share.permission_level,
         status: share.status,
       };
@@ -201,11 +205,16 @@ export const getTasksSharedWithMe = async (): Promise<Task[]> => {
     // Add sharing information to each task
     return tasks.map((task) => {
       const share = shares.find((s) => s.task_id === task.id);
-      const profile = share?.profiles || {};
+
+      // Ensure profiles is an object, not an array
+      const profile = share && typeof share.profiles === 'object' && share.profiles !== null
+        ? share.profiles
+        : {};
+
       return {
         ...task,
         is_shared: true,
-        shared_by: profile.email || share?.owner_id || '',
+        shared_by: typeof profile.email === 'string' ? profile.email : share?.owner_id || '',
       };
     });
   } catch (error) {
@@ -239,18 +248,24 @@ export const getPendingTaskShares = async (): Promise<TaskShare[]> => {
 
     // Make sure we handle the nested objects properly
     return (data || []).map(share => {
-      const taskData = share.tasks || {};
-      const profileData = share.profiles || {};
+      // Ensure tasks and profiles are objects, not arrays
+      const taskData = typeof share.tasks === 'object' && share.tasks !== null
+        ? share.tasks
+        : {};
+
+      const profileData = typeof share.profiles === 'object' && share.profiles !== null
+        ? share.profiles
+        : {};
 
       return {
         ...share,
         tasks: {
-          title: taskData.title || '',
-          description: taskData.description || ''
+          title: typeof taskData.title === 'string' ? taskData.title : '',
+          description: typeof taskData.description === 'string' ? taskData.description : ''
         },
         profiles: {
-          email: profileData.email || '',
-          name: profileData.name || ''
+          email: typeof profileData.email === 'string' ? profileData.email : '',
+          name: typeof profileData.name === 'string' ? profileData.name : ''
         }
       };
     });
@@ -283,13 +298,16 @@ export const getTaskShareActivities = async (taskId: string): Promise<TaskShareA
 
     // Make sure we handle the nested objects properly
     return (data || []).map(activity => {
-      const profileData = activity.profiles || {};
+      // Ensure profiles is an object, not an array
+      const profileData = typeof activity.profiles === 'object' && activity.profiles !== null
+        ? activity.profiles
+        : {};
 
       return {
         ...activity,
         profiles: {
-          email: profileData.email || '',
-          name: profileData.name || ''
+          email: typeof profileData.email === 'string' ? profileData.email : '',
+          name: typeof profileData.name === 'string' ? profileData.name : ''
         }
       };
     });
