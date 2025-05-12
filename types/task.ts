@@ -22,13 +22,13 @@ export interface TaskShare {
   created_at: string;
   updated_at?: string;
   tasks?: {
-    id: string;
-    title: string;
+    id?: string;
+    title?: string;
     description?: string;
   };
   profiles?: {
-    id: string;
-    email: string;
+    id?: string;
+    email?: string;
     name?: string;
   };
 }
@@ -40,6 +40,11 @@ export interface TaskShareActivity {
   activity_type: 'create' | 'update' | 'delete' | 'share' | 'unshare' | 'status_change' | 'comment';
   activity_data?: any;
   created_at: string;
+  profiles?: {
+    id?: string;
+    email?: string;
+    name?: string;
+  };
 }
 
 export interface SharedUser {
