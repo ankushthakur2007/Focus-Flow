@@ -83,15 +83,17 @@ export const getTaskShares = async (taskId: string): Promise<SharedUser[]> => {
 
     // Transform the data to match the SharedUser interface
     return (shares || []).map((share) => {
-      // Ensure profiles is an object, not an array
-      const profile = typeof share.profiles === 'object' && share.profiles !== null
-        ? share.profiles
-        : {};
+      // Use a type assertion to help TypeScript understand the structure
+      const profileData = share.profiles as { email?: string; name?: string } | null | undefined;
+
+      // Get email and name safely
+      const email = profileData && typeof profileData.email === 'string' ? profileData.email : '';
+      const name = profileData && typeof profileData.name === 'string' ? profileData.name : undefined;
 
       return {
         id: share.shared_with_id,
-        email: typeof profile.email === 'string' ? profile.email : '',
-        name: typeof profile.name === 'string' ? profile.name : undefined,
+        email,
+        name,
         permission_level: share.permission_level,
         status: share.status,
       };
@@ -206,15 +208,16 @@ export const getTasksSharedWithMe = async (): Promise<Task[]> => {
     return tasks.map((task) => {
       const share = shares.find((s) => s.task_id === task.id);
 
-      // Ensure profiles is an object, not an array
-      const profile = share && typeof share.profiles === 'object' && share.profiles !== null
-        ? share.profiles
-        : {};
+      // Use a type assertion to help TypeScript understand the structure
+      const profileData = share?.profiles as { email?: string; name?: string } | null | undefined;
+
+      // Get email safely
+      const email = profileData && typeof profileData.email === 'string' ? profileData.email : '';
 
       return {
         ...task,
         is_shared: true,
-        shared_by: typeof profile.email === 'string' ? profile.email : share?.owner_id || '',
+        shared_by: email || share?.owner_id || '',
       };
     });
   } catch (error) {
@@ -248,24 +251,25 @@ export const getPendingTaskShares = async (): Promise<TaskShare[]> => {
 
     // Make sure we handle the nested objects properly
     return (data || []).map(share => {
-      // Ensure tasks and profiles are objects, not arrays
-      const taskData = typeof share.tasks === 'object' && share.tasks !== null
-        ? share.tasks
-        : {};
+      // Use type assertions to help TypeScript understand the structure
+      const taskData = share.tasks as { title?: string; description?: string } | null | undefined;
+      const profileData = share.profiles as { email?: string; name?: string } | null | undefined;
 
-      const profileData = typeof share.profiles === 'object' && share.profiles !== null
-        ? share.profiles
-        : {};
+      // Get properties safely
+      const title = taskData && typeof taskData.title === 'string' ? taskData.title : '';
+      const description = taskData && typeof taskData.description === 'string' ? taskData.description : '';
+      const email = profileData && typeof profileData.email === 'string' ? profileData.email : '';
+      const name = profileData && typeof profileData.name === 'string' ? profileData.name : '';
 
       return {
         ...share,
         tasks: {
-          title: typeof taskData.title === 'string' ? taskData.title : '',
-          description: typeof taskData.description === 'string' ? taskData.description : ''
+          title,
+          description
         },
         profiles: {
-          email: typeof profileData.email === 'string' ? profileData.email : '',
-          name: typeof profileData.name === 'string' ? profileData.name : ''
+          email,
+          name
         }
       };
     });
@@ -298,16 +302,18 @@ export const getTaskShareActivities = async (taskId: string): Promise<TaskShareA
 
     // Make sure we handle the nested objects properly
     return (data || []).map(activity => {
-      // Ensure profiles is an object, not an array
-      const profileData = typeof activity.profiles === 'object' && activity.profiles !== null
-        ? activity.profiles
-        : {};
+      // Use a type assertion to help TypeScript understand the structure
+      const profileData = activity.profiles as { email?: string; name?: string } | null | undefined;
+
+      // Get properties safely
+      const email = profileData && typeof profileData.email === 'string' ? profileData.email : '';
+      const name = profileData && typeof profileData.name === 'string' ? profileData.name : '';
 
       return {
         ...activity,
         profiles: {
-          email: typeof profileData.email === 'string' ? profileData.email : '',
-          name: typeof profileData.name === 'string' ? profileData.name : ''
+          email,
+          name
         }
       };
     });
