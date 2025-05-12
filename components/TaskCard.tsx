@@ -77,6 +77,7 @@ const TaskCard = ({ task, onStatusChange, onDelete, isShared = false, sharedBy }
   };
 
   return (
+    <>
     <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 ${isShared ? 'border-l-4 border-blue-500' : ''}`}>
 
       {/* Card Header */}
@@ -249,7 +250,7 @@ const TaskCard = ({ task, onStatusChange, onDelete, isShared = false, sharedBy }
         onClose={() => setShowShareModal(false)}
       />
     )}
-  );
+  </>);
 };
 
 export default TaskCard;
