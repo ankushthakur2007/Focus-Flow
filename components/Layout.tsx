@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import AuthContext from './AuthContext';
+import Footer from './Footer';
 
 interface LayoutProps {
   children: ReactNode;
@@ -181,13 +182,7 @@ const Layout = ({ children }: LayoutProps) => {
           {children}
         </main>
 
-        <footer className="bg-white dark:bg-gray-800 shadow">
-          <div className="container mx-auto px-4 py-4">
-            <p className="text-center text-gray-500 dark:text-gray-400 text-sm">
-              &copy; {new Date().getFullYear()} FocusFlow. All rights reserved.
-            </p>
-          </div>
-        </footer>
+        <Footer />
       </div>
     </>
   );
