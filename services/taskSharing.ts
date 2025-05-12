@@ -161,13 +161,30 @@ export const respondToTaskShare = async (
     console.log(`Responding to task share ${taskShareId} with ${response}`);
 
     // First, check if the user is authenticated
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error('Session error:', sessionError);
+      throw new Error('Authentication error: ' + sessionError.message);
+    }
+
+    if (!sessionData.session) {
+      console.error('No active session found');
+      throw new Error('No active session found. Please log in again.');
+    }
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.error('User error:', userError);
+      throw new Error('Authentication error: ' + userError.message);
+    }
+
     if (!user) {
       console.error('No authenticated user found');
-      throw new Error('User not authenticated');
+      throw new Error('User not authenticated. Please log in again.');
     }
 
     console.log('Authenticated user ID:', user.id);
+    console.log('Session expires at:', sessionData.session.expires_at);
 
     // Verify the task share belongs to the current user
     const { data: share, error: fetchError } = await supabase
@@ -179,13 +196,15 @@ export const respondToTaskShare = async (
 
     if (fetchError) {
       console.error('Error fetching task share:', fetchError);
-      throw fetchError;
+      throw new Error('Failed to fetch task share: ' + fetchError.message);
     }
 
     if (!share) {
       console.error('Task share not found or not accessible');
       throw new Error('Task share not found or not accessible');
     }
+
+    console.log('Found task share:', share);
 
     // Update the task share status
     const { error } = await supabase
@@ -199,10 +218,10 @@ export const respondToTaskShare = async (
 
     if (error) {
       console.error('Error updating task share status:', error);
-      throw error;
+      throw new Error('Failed to update task share: ' + error.message);
     }
 
-    console.log('Task share status updated successfully');
+    console.log('Task share status updated successfully to:', response);
   } catch (error) {
     console.error('Error responding to task share:', error);
     throw error;
@@ -217,30 +236,48 @@ export const getTasksSharedWithMe = async (): Promise<Task[]> => {
     console.log('Fetching tasks shared with me...');
 
     // First, check if the user is authenticated
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error('Session error:', sessionError);
+      throw new Error('Authentication error: ' + sessionError.message);
+    }
+
+    if (!sessionData.session) {
+      console.error('No active session found');
+      throw new Error('No active session found. Please log in again.');
+    }
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.error('User error:', userError);
+      throw new Error('Authentication error: ' + userError.message);
+    }
+
     if (!user) {
       console.error('No authenticated user found');
-      return [];
+      throw new Error('User not authenticated. Please log in again.');
     }
 
     console.log('Authenticated user ID:', user.id);
+    console.log('Session expires at:', sessionData.session.expires_at);
 
     // Get tasks shared with the current user
     const { data: shares, error: sharesError } = await supabase
       .from('task_shares')
       .select(`
+        id,
         task_id,
         owner_id,
         permission_level,
         status,
-        profiles:owner_id (email, name)
+        profiles:owner_id (id, email, name)
       `)
       .eq('shared_with_id', user.id)
       .eq('status', 'accepted');
 
     if (sharesError) {
       console.error('Error fetching shared tasks:', sharesError);
-      throw sharesError;
+      throw new Error('Failed to fetch shared tasks: ' + sharesError.message);
     }
 
     console.log('Shared tasks found:', shares?.length || 0);
@@ -260,23 +297,32 @@ export const getTasksSharedWithMe = async (): Promise<Task[]> => {
 
     if (tasksError) {
       console.error('Error fetching task details:', tasksError);
-      throw tasksError;
+      throw new Error('Failed to fetch task details: ' + tasksError.message);
     }
+
+    if (!tasks || tasks.length === 0) {
+      console.log('No task details found for the shared tasks');
+      return [];
+    }
+
+    console.log('Task details found:', tasks.length);
 
     // Add sharing information to each task
     return tasks.map((task) => {
       const share = shares.find((s) => s.task_id === task.id);
 
       // Use a type assertion to help TypeScript understand the structure
-      const profileData = share?.profiles as { email?: string; name?: string } | null | undefined;
+      const profileData = share?.profiles as { id?: string; email?: string; name?: string } | null | undefined;
 
       // Get email safely
       const email = profileData && typeof profileData.email === 'string' ? profileData.email : '';
+      const name = profileData && typeof profileData.name === 'string' ? profileData.name : '';
+      const displayName = name || email || share?.owner_id || 'Unknown';
 
       return {
         ...task,
         is_shared: true,
-        shared_by: email || share?.owner_id || '',
+        shared_by: displayName,
       };
     });
   } catch (error) {
@@ -293,13 +339,30 @@ export const getPendingTaskShares = async (): Promise<TaskShare[]> => {
     console.log('Fetching pending task shares...');
 
     // First, check if the user is authenticated
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error('Session error:', sessionError);
+      throw new Error('Authentication error: ' + sessionError.message);
+    }
+
+    if (!sessionData.session) {
+      console.error('No active session found');
+      throw new Error('No active session found. Please log in again.');
+    }
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.error('User error:', userError);
+      throw new Error('Authentication error: ' + userError.message);
+    }
+
     if (!user) {
       console.error('No authenticated user found');
-      return [];
+      throw new Error('User not authenticated. Please log in again.');
     }
 
     console.log('Authenticated user ID:', user.id);
+    console.log('Session expires at:', sessionData.session.expires_at);
 
     // Get pending task shares for the current user
     const { data, error } = await supabase
@@ -313,26 +376,31 @@ export const getPendingTaskShares = async (): Promise<TaskShare[]> => {
         status,
         created_at,
         updated_at,
-        tasks:task_id (title, description),
-        profiles:owner_id (email, name)
+        tasks:task_id (id, title, description),
+        profiles:owner_id (id, email, name)
       `)
       .eq('shared_with_id', user.id)
       .eq('status', 'pending');
 
     if (error) {
       console.error('Error fetching pending task shares:', error);
-      throw error;
+      throw new Error('Failed to fetch pending task shares: ' + error.message);
     }
 
     console.log('Pending task shares found:', data?.length || 0);
 
+    if (!data || data.length === 0) {
+      return [];
+    }
+
     // Make sure we handle the nested objects properly
-    return (data || []).map(share => {
+    return data.map(share => {
       // Use type assertions to help TypeScript understand the structure
-      const taskData = share.tasks as { title?: string; description?: string } | null | undefined;
-      const profileData = share.profiles as { email?: string; name?: string } | null | undefined;
+      const taskData = share.tasks as { id?: string; title?: string; description?: string } | null | undefined;
+      const profileData = share.profiles as { id?: string; email?: string; name?: string } | null | undefined;
 
       // Get properties safely
+      const taskId = taskData && typeof taskData.id === 'string' ? taskData.id : '';
       const title = taskData && typeof taskData.title === 'string' ? taskData.title : '';
       const description = taskData && typeof taskData.description === 'string' ? taskData.description : '';
       const email = profileData && typeof profileData.email === 'string' ? profileData.email : '';
@@ -341,10 +409,12 @@ export const getPendingTaskShares = async (): Promise<TaskShare[]> => {
       return {
         ...share,
         tasks: {
+          id: taskId,
           title,
           description
         },
         profiles: {
+          id: profileData?.id || '',
           email,
           name
         }

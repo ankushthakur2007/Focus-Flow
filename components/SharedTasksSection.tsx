@@ -35,24 +35,56 @@ const SharedTasksSection: React.FC = () => {
       console.log('Loading shared tasks for user:', user.id);
 
       // Check if the session is valid
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('No active session found');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        throw new Error('Authentication error: ' + sessionError.message);
       }
 
-      const [tasks, pending] = await Promise.all([
-        getTasksSharedWithMe(),
-        getPendingTaskShares()
-      ]);
+      if (!session) {
+        console.error('No active session found');
+        throw new Error('Your session has expired. Please log in again.');
+      }
 
-      console.log('Loaded shared tasks:', tasks.length);
-      console.log('Loaded pending shares:', pending.length);
+      console.log('Session is valid, expires at:', session.expires_at);
+
+      // Load tasks and pending shares in sequence to better isolate errors
+      let tasks: Task[] = [];
+      let pending: TaskShare[] = [];
+
+      try {
+        console.log('Fetching shared tasks...');
+        tasks = await getTasksSharedWithMe();
+        console.log('Loaded shared tasks:', tasks.length);
+      } catch (taskErr: any) {
+        console.error('Error loading shared tasks:', taskErr);
+        throw new Error(`Failed to load shared tasks: ${taskErr.message || 'Unknown error'}`);
+      }
+
+      try {
+        console.log('Fetching pending shares...');
+        pending = await getPendingTaskShares();
+        console.log('Loaded pending shares:', pending.length);
+      } catch (pendingErr: any) {
+        console.error('Error loading pending shares:', pendingErr);
+        // Don't throw here, we can still show shared tasks even if pending fails
+        // Just use an empty array for pending shares
+      }
 
       setSharedTasks(tasks);
       setPendingShares(pending);
-    } catch (err) {
-      console.error('Error loading shared tasks:', err);
-      setError('Failed to load shared tasks');
+    } catch (err: any) {
+      console.error('Error in loadSharedTasks:', err);
+      setError(err.message || 'Failed to load shared tasks');
+
+      // If it's an authentication error, suggest refreshing the page
+      if (err.message && (
+        err.message.includes('authentication') ||
+        err.message.includes('session') ||
+        err.message.includes('log in')
+      )) {
+        setError(`Authentication error: ${err.message}. Please refresh the page or log in again.`);
+      }
     } finally {
       setLoading(false);
     }
@@ -66,16 +98,38 @@ const SharedTasksSection: React.FC = () => {
     }
 
     setLoading(true);
+    setError(null);
 
     try {
       console.log(`Responding to task share ${taskShareId} with ${response}`);
+
+      // Check if the session is valid before proceeding
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        throw new Error('Authentication error: ' + sessionError.message);
+      }
+
+      if (!session) {
+        console.error('No active session found');
+        throw new Error('Your session has expired. Please log in again.');
+      }
+
       await respondToTaskShare(taskShareId, response);
       console.log('Response successful, reloading data');
+
       // Reload the data
       loadSharedTasks();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error responding to task share:', err);
-      setError('Failed to respond to task share');
+
+      // Provide a more specific error message
+      if (err.message) {
+        setError(`Failed to respond to task share: ${err.message}`);
+      } else {
+        setError('Failed to respond to task share');
+      }
+
       setLoading(false);
     }
   };
@@ -122,6 +176,36 @@ const SharedTasksSection: React.FC = () => {
 
   return (
     <div className="py-4">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold">Shared Tasks</h2>
+        <button
+          onClick={() => {
+            setLoading(true);
+            setError(null);
+            loadSharedTasks();
+          }}
+          className="px-3 py-1 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-md flex items-center"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Loading...
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              Refresh
+            </>
+          )}
+        </button>
+      </div>
+
       {pendingShares.length > 0 && (
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">
@@ -187,20 +271,28 @@ const SharedTasksSection: React.FC = () => {
         {sharedTasks.length === 0 ? (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center">
             <p className="text-gray-600 dark:text-gray-400">No tasks have been shared with you yet.</p>
+            <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+              When someone shares a task with you, it will appear here.
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sharedTasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onStatusChange={() => loadSharedTasks()}
-                onDelete={() => loadSharedTasks()}
-                isShared={true}
-                sharedBy={task.shared_by}
-              />
-            ))}
-          </div>
+          <>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              These tasks have been shared with you by other users. You can view and interact with them based on your permission level.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sharedTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onStatusChange={() => loadSharedTasks()}
+                  onDelete={() => loadSharedTasks()}
+                  isShared={true}
+                  sharedBy={task.shared_by}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>
