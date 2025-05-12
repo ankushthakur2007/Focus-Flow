@@ -5,7 +5,16 @@ import ResponsiveContainer from '../components/ResponsiveContainer';
 import { Task } from '../types/task';
 import { Mood } from '../types/mood';
 import { format, subDays, startOfWeek, endOfWeek, eachDayOfInterval, parseISO, isWithinInterval } from 'date-fns';
-import { fetchTaskAnalytics, fetchMoodAnalytics } from '../services/analytics';
+import {
+  fetchTaskAnalytics,
+  fetchMoodAnalytics,
+  fetchDailyAnalytics,
+  fetchMoodAnalytics2,
+  fetchCategoryAnalytics,
+  DailyAnalytics,
+  MoodAnalytics,
+  CategoryAnalytics
+} from '../services/analytics';
 import TaskCompletionChart from '../components/analytics/TaskCompletionChart';
 import ProductivityTrendChart from '../components/analytics/ProductivityTrendChart';
 import MoodCorrelationChart from '../components/analytics/MoodCorrelationChart';
@@ -18,26 +27,35 @@ const AnalyticsPage = () => {
   const [timeRange, setTimeRange] = useState<TimeRange>('7days');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [moods, setMoods] = useState<Mood[]>([]);
+  const [dailyAnalytics, setDailyAnalytics] = useState<DailyAnalytics[]>([]);
+  const [moodAnalytics, setMoodAnalytics] = useState<MoodAnalytics[]>([]);
+  const [categoryAnalytics, setCategoryAnalytics] = useState<CategoryAnalytics[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useContext(AuthContext);
 
   useEffect(() => {
     if (!user) return;
-    
+
     const fetchData = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
-        // Fetch tasks and moods data
-        const [tasksData, moodsData] = await Promise.all([
+        // Fetch analytics data from the new tables
+        const [tasksData, moodsData, dailyData, moodAnalyticsData, categoryData] = await Promise.all([
           fetchTaskAnalytics(timeRange),
-          fetchMoodAnalytics(timeRange)
+          fetchMoodAnalytics(timeRange),
+          fetchDailyAnalytics(timeRange),
+          fetchMoodAnalytics2(timeRange),
+          fetchCategoryAnalytics(timeRange)
         ]);
-        
+
         setTasks(tasksData);
         setMoods(moodsData);
+        setDailyAnalytics(dailyData);
+        setMoodAnalytics(moodAnalyticsData);
+        setCategoryAnalytics(categoryData);
       } catch (err) {
         console.error('Error fetching analytics data:', err);
         setError('Failed to load analytics data. Please try again later.');
@@ -45,7 +63,7 @@ const AnalyticsPage = () => {
         setLoading(false);
       }
     };
-    
+
     fetchData();
   }, [user, timeRange]);
 
@@ -67,7 +85,7 @@ const AnalyticsPage = () => {
     <ResponsiveContainer className="py-8 pb-20">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Task Analytics & Insights</h1>
-        
+
         <div className="flex space-x-2 w-full sm:w-auto">
           <select
             value={timeRange}
@@ -103,34 +121,56 @@ const AnalyticsPage = () => {
       ) : (
         <>
           {/* Analytics Summary */}
-          <AnalyticsSummary tasks={tasks} moods={moods} timeRange={timeRange} />
-          
+          <AnalyticsSummary
+            tasks={tasks}
+            moods={moods}
+            timeRange={timeRange}
+            dailyAnalytics={dailyAnalytics}
+          />
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
             {/* Task Completion Chart */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
               <h2 className="text-xl font-semibold mb-4">Task Completion Rate</h2>
-              <TaskCompletionChart tasks={tasks} timeRange={timeRange} />
+              <TaskCompletionChart
+                tasks={tasks}
+                timeRange={timeRange}
+                dailyAnalytics={dailyAnalytics}
+              />
             </div>
-            
+
             {/* Productivity Trend Chart */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
               <h2 className="text-xl font-semibold mb-4">Productivity Trend</h2>
-              <ProductivityTrendChart tasks={tasks} timeRange={timeRange} />
+              <ProductivityTrendChart
+                tasks={tasks}
+                timeRange={timeRange}
+                dailyAnalytics={dailyAnalytics}
+              />
             </div>
-            
+
             {/* Mood Correlation Chart */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
               <h2 className="text-xl font-semibold mb-4">Mood & Productivity Correlation</h2>
-              <MoodCorrelationChart tasks={tasks} moods={moods} timeRange={timeRange} />
+              <MoodCorrelationChart
+                tasks={tasks}
+                moods={moods}
+                timeRange={timeRange}
+                moodAnalytics={moodAnalytics}
+              />
             </div>
-            
+
             {/* Category Distribution Chart */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
               <h2 className="text-xl font-semibold mb-4">Task Category Distribution</h2>
-              <CategoryDistributionChart tasks={tasks} timeRange={timeRange} />
+              <CategoryDistributionChart
+                tasks={tasks}
+                timeRange={timeRange}
+                categoryAnalytics={categoryAnalytics}
+              />
             </div>
           </div>
-          
+
           {/* Productivity Insights */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mt-6">
             <h2 className="text-xl font-semibold mb-4">Productivity Insights</h2>

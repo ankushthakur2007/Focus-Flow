@@ -1,24 +1,44 @@
 import { useEffect, useRef } from 'react';
 import { Task } from '../../types/task';
-import { groupTasksByCategory } from '../../services/analytics';
+import { groupTasksByCategory, CategoryAnalytics } from '../../services/analytics';
 
 interface CategoryDistributionChartProps {
   tasks: Task[];
   timeRange: string;
+  categoryAnalytics?: CategoryAnalytics[];
 }
 
-const CategoryDistributionChart: React.FC<CategoryDistributionChartProps> = ({ tasks, timeRange }) => {
+const CategoryDistributionChart: React.FC<CategoryDistributionChartProps> = ({ tasks, timeRange, categoryAnalytics = [] }) => {
   const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!chartRef.current || tasks.length === 0) return;
+    if (!chartRef.current) return;
+    if (tasks.length === 0 && categoryAnalytics.length === 0) return;
 
-    // Group tasks by category
-    const tasksByCategory = groupTasksByCategory(tasks);
-    
-    // Render the chart
-    renderPieChart(tasksByCategory);
-  }, [tasks, timeRange]);
+    // If we have analytics data, use that instead of calculating from tasks
+    if (categoryAnalytics && categoryAnalytics.length > 0) {
+      // Convert analytics data to the format needed for the chart
+      const tasksByCategory: Record<string, number> = {
+        work: 0,
+        study: 0,
+        chores: 0,
+        health: 0,
+        social: 0,
+        other: 0
+      };
+
+      categoryAnalytics.forEach(category => {
+        tasksByCategory[category.category] = category.task_count;
+      });
+
+      // Render the chart with analytics data
+      renderPieChart(tasksByCategory);
+    } else {
+      // Fall back to calculating from tasks
+      const tasksByCategory = groupTasksByCategory(tasks);
+      renderPieChart(tasksByCategory);
+    }
+  }, [tasks, timeRange, categoryAnalytics]);
 
   const renderPieChart = (tasksByCategory: Record<string, number>) => {
     if (!chartRef.current) return;
@@ -30,23 +50,23 @@ const CategoryDistributionChart: React.FC<CategoryDistributionChartProps> = ({ t
     const categories = Object.entries(tasksByCategory)
       .filter(([_, count]) => count > 0)
       .sort((a, b) => b[1] - a[1]);
-    
+
     // Calculate total tasks
     const totalTasks = categories.reduce((sum, [_, count]) => sum + count, 0);
-    
+
     // Chart dimensions
     const size = 100;
     const radius = 40;
     const centerX = size / 2;
     const centerY = size / 2;
-    
+
     // Create SVG element
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
     svg.setAttribute('width', '100%');
     svg.setAttribute('height', '100%');
     svg.setAttribute('class', 'pie-chart');
-    
+
     // Category colors
     const categoryColors: Record<string, string> = {
       work: '#3B82F6', // Blue
@@ -56,26 +76,26 @@ const CategoryDistributionChart: React.FC<CategoryDistributionChartProps> = ({ t
       social: '#EC4899', // Pink
       other: '#6B7280', // Gray
     };
-    
+
     // Create pie segments
     let startAngle = 0;
-    
+
     categories.forEach(([category, count]) => {
       const percentage = count / totalTasks;
       const endAngle = startAngle + percentage * 2 * Math.PI;
-      
+
       // Calculate arc points
       const startX = centerX + radius * Math.cos(startAngle);
       const startY = centerY + radius * Math.sin(startAngle);
       const endX = centerX + radius * Math.cos(endAngle);
       const endY = centerY + radius * Math.sin(endAngle);
-      
+
       // Create path for the segment
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      
+
       // Determine if the arc should be drawn the long way around
       const largeArcFlag = percentage > 0.5 ? 1 : 0;
-      
+
       // Create the path data
       const pathData = [
         `M ${centerX} ${centerY}`, // Move to center
@@ -83,12 +103,12 @@ const CategoryDistributionChart: React.FC<CategoryDistributionChartProps> = ({ t
         `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`, // Draw arc
         'Z' // Close path
       ].join(' ');
-      
+
       path.setAttribute('d', pathData);
       path.setAttribute('fill', categoryColors[category] || '#6B7280');
-      
+
       svg.appendChild(path);
-      
+
       // Add label for segments that are large enough
       if (percentage > 0.05) {
         // Calculate position for label
@@ -96,7 +116,7 @@ const CategoryDistributionChart: React.FC<CategoryDistributionChartProps> = ({ t
         const labelRadius = radius * 0.7; // Place label inside the segment
         const labelX = centerX + labelRadius * Math.cos(labelAngle);
         const labelY = centerY + labelRadius * Math.sin(labelAngle);
-        
+
         const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         label.setAttribute('x', labelX.toString());
         label.setAttribute('y', labelY.toString());
@@ -106,37 +126,37 @@ const CategoryDistributionChart: React.FC<CategoryDistributionChartProps> = ({ t
         label.setAttribute('font-weight', 'bold');
         label.setAttribute('fill', 'white');
         label.textContent = `${Math.round(percentage * 100)}%`;
-        
+
         svg.appendChild(label);
       }
-      
+
       startAngle = endAngle;
     });
-    
+
     // Append the SVG to the chart container
     chartRef.current.appendChild(svg);
-    
+
     // Create legend
     const legend = document.createElement('div');
     legend.className = 'grid grid-cols-2 gap-2 mt-4';
-    
+
     categories.forEach(([category, count]) => {
       const legendItem = document.createElement('div');
       legendItem.className = 'flex items-center';
-      
+
       const colorBox = document.createElement('div');
       colorBox.className = 'w-3 h-3 rounded-sm mr-2';
       colorBox.style.backgroundColor = categoryColors[category] || '#6B7280';
-      
+
       const label = document.createElement('span');
       label.className = 'text-sm text-gray-600 dark:text-gray-400 capitalize';
       label.textContent = `${category} (${count})`;
-      
+
       legendItem.appendChild(colorBox);
       legendItem.appendChild(label);
       legend.appendChild(legendItem);
     });
-    
+
     chartRef.current.appendChild(legend);
   };
 

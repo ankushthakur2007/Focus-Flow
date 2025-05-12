@@ -1,22 +1,35 @@
 import { Task } from '../../types/task';
 import { Mood } from '../../types/mood';
-import { calculateCompletionRate } from '../../services/analytics';
+import { calculateCompletionRate, DailyAnalytics } from '../../services/analytics';
 
 interface AnalyticsSummaryProps {
   tasks: Task[];
   moods: Mood[];
   timeRange: string;
+  dailyAnalytics?: DailyAnalytics[];
 }
 
-const AnalyticsSummary: React.FC<AnalyticsSummaryProps> = ({ tasks, moods, timeRange }) => {
-  // Calculate summary statistics
-  const completionRate = calculateCompletionRate(tasks);
-  const totalTasks = tasks.length;
-  const completedTasks = tasks.filter(task => task.status === 'completed').length;
-  const inProgressTasks = tasks.filter(task => task.status === 'in_progress').length;
-  const pendingTasks = tasks.filter(task => task.status === 'pending').length;
+const AnalyticsSummary: React.FC<AnalyticsSummaryProps> = ({ tasks, moods, timeRange, dailyAnalytics = [] }) => {
+  // Calculate summary statistics - use analytics table data if available
+  let completionRate = calculateCompletionRate(tasks);
+  let totalTasks = tasks.length;
+  let completedTasks = tasks.filter(task => task.status === 'completed').length;
+  let inProgressTasks = tasks.filter(task => task.status === 'in_progress').length;
+  let pendingTasks = tasks.filter(task => task.status === 'pending').length;
   const totalMoods = moods.length;
-  
+
+  // If we have analytics data, use that instead
+  if (dailyAnalytics && dailyAnalytics.length > 0) {
+    // Sum up the values from all daily analytics
+    totalTasks = dailyAnalytics.reduce((sum, day) => sum + day.total_tasks, 0);
+    completedTasks = dailyAnalytics.reduce((sum, day) => sum + day.completed_tasks, 0);
+    inProgressTasks = dailyAnalytics.reduce((sum, day) => sum + day.in_progress_tasks, 0);
+    pendingTasks = dailyAnalytics.reduce((sum, day) => sum + day.pending_tasks, 0);
+
+    // Calculate the overall completion rate
+    completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  }
+
   // Get time range display text
   const getTimeRangeText = () => {
     switch (timeRange) {
