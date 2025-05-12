@@ -24,7 +24,11 @@ const ChatPage = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Fetch task details and chat history
+  // State for permission level
+  const [permissionLevel, setPermissionLevel] = useState<string | null>(null);
+  const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
+
+  // Fetch task details, check permissions, and get chat history
   useEffect(() => {
     if (!taskId || !user) return;
 
@@ -41,9 +45,40 @@ const ChatPage = () => {
         if (taskError) throw taskError;
         setTask(taskData);
 
-        // Fetch chat history
-        const chatHistory = await getChatHistory(taskId as string);
-        setMessages(chatHistory);
+        // Check if user is the task owner
+        if (taskData.user_id === user.id) {
+          setPermissionLevel('admin');
+          setIsAuthorized(true);
+        } else {
+          // Check if task is shared with the user
+          const { data: shareData, error: shareError } = await supabase
+            .from('task_shares')
+            .select('permission_level')
+            .eq('task_id', taskId)
+            .eq('shared_with_id', user.id)
+            .eq('status', 'accepted')
+            .single();
+
+          if (shareError && shareError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+            console.error('Error checking task share permission:', shareError);
+          }
+
+          if (shareData) {
+            setPermissionLevel(shareData.permission_level);
+            // Only admin permission can chat with AI
+            setIsAuthorized(shareData.permission_level === 'admin');
+          } else {
+            // No share found, user is not authorized
+            setPermissionLevel('none');
+            setIsAuthorized(false);
+          }
+        }
+
+        // Only fetch chat history if authorized
+        if (taskData.user_id === user.id || permissionLevel === 'admin') {
+          const chatHistory = await getChatHistory(taskId as string);
+          setMessages(chatHistory);
+        }
       } catch (error) {
         console.error('Error fetching task or chat history:', error);
       } finally {
@@ -168,6 +203,40 @@ const ChatPage = () => {
           <Link href="/tasks" className="btn btn-primary">
             Back to Tasks
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Show a message if the user doesn't have permission to chat
+  if (!isAuthorized && task) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <h1 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">{task.title}</h1>
+          <div className="bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 p-4 mb-6">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700 dark:text-yellow-200">
+                  You don't have permission to chat with the AI assistant for this task.
+                </p>
+                <p className="mt-2 text-xs text-yellow-600 dark:text-yellow-300">
+                  Only task owners and users with admin permission can use the chat feature.
+                  Your current permission level: <strong>{permissionLevel || 'none'}</strong>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-center">
+            <Link href="/tasks" className="bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-4 rounded transition-colors">
+              Back to Tasks
+            </Link>
+          </div>
         </div>
       </div>
     );

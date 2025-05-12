@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { supabase } from '../services/supabase';
 import { Recommendation } from '../types/recommendation';
+import AuthContext from './AuthContext';
 import { format, parseISO } from 'date-fns';
 
 interface TaskRecommendationProps {
@@ -83,6 +84,72 @@ const TaskRecommendation = ({ taskId }: TaskRecommendationProps) => {
           <div className="h-2 w-2 bg-primary-500 rounded-full"></div>
           <div className="h-2 w-2 bg-primary-500 rounded-full"></div>
           <div className="h-2 w-2 bg-primary-500 rounded-full"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if this is a shared task with non-admin permission
+  const { user } = useContext(AuthContext);
+  const [permissionLevel, setPermissionLevel] = useState<string | null>(null);
+  const [isSharedTask, setIsSharedTask] = useState<boolean>(false);
+
+  useEffect(() => {
+    const checkPermission = async () => {
+      if (!user || !taskId) return;
+
+      try {
+        // First check if this is a shared task
+        const { data: taskData, error: taskError } = await supabase
+          .from('tasks')
+          .select('user_id')
+          .eq('id', taskId)
+          .single();
+
+        if (taskError) {
+          console.error('Error checking task ownership:', taskError);
+          return;
+        }
+
+        // If the user is the task owner, they have full access
+        if (taskData.user_id === user.id) {
+          setPermissionLevel('admin');
+          return;
+        }
+
+        // If not the owner, check if it's a shared task
+        const { data: shareData, error: shareError } = await supabase
+          .from('task_shares')
+          .select('permission_level')
+          .eq('task_id', taskId)
+          .eq('shared_with_id', user.id)
+          .eq('status', 'accepted')
+          .single();
+
+        if (shareError && shareError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+          console.error('Error checking task share permission:', shareError);
+          return;
+        }
+
+        if (shareData) {
+          setIsSharedTask(true);
+          setPermissionLevel(shareData.permission_level);
+        }
+      } catch (err) {
+        console.error('Error in checkPermission:', err);
+      }
+    };
+
+    checkPermission();
+  }, [user, taskId]);
+
+  // If this is a shared task with non-admin permission, show a message
+  if (isSharedTask && permissionLevel !== 'admin') {
+    return (
+      <div className="text-sm text-gray-500 py-2">
+        <div>AI insights are only available to task owners and admins.</div>
+        <div className="mt-2 text-xs">
+          Your permission level: {permissionLevel || 'unknown'}
         </div>
       </div>
     );

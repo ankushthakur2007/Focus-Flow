@@ -22,13 +22,16 @@ const TaskCard = ({ task, onStatusChange, onDelete, isShared = false, sharedBy }
   const [isAdmin, setIsAdmin] = useState(false);
   const { user } = useContext(AuthContext);
 
-  // Check if the user has admin permissions for this shared task
+  // State for permission level
+  const [permissionLevel, setPermissionLevel] = useState<'admin' | 'edit' | 'view' | null>(null);
+
+  // Check the user's permission level for this shared task
   useEffect(() => {
-    const checkAdminPermission = async () => {
+    const checkPermission = async () => {
       if (!user || !isShared || !task.id) return;
 
       try {
-        console.log('Checking admin permission for task:', task.id);
+        console.log('Checking permission for task:', task.id);
         const { data, error } = await supabase
           .from('task_shares')
           .select('permission_level')
@@ -38,22 +41,28 @@ const TaskCard = ({ task, onStatusChange, onDelete, isShared = false, sharedBy }
           .single();
 
         if (error) {
-          console.error('Error checking admin permission:', error);
+          console.error('Error checking permission:', error);
           return;
         }
 
-        if (data && data.permission_level === 'admin') {
-          console.log('User has admin permission for this task');
-          setIsAdmin(true);
+        if (data) {
+          console.log('User has permission level for this task:', data.permission_level);
+          setPermissionLevel(data.permission_level as 'admin' | 'edit' | 'view');
+
+          // Set isAdmin for backward compatibility
+          if (data.permission_level === 'admin') {
+            setIsAdmin(true);
+          }
         } else {
-          console.log('User does not have admin permission for this task:', data?.permission_level);
+          console.log('No permission data found for this task');
+          setPermissionLevel('view'); // Default to view permission
         }
       } catch (err) {
-        console.error('Error in checkAdminPermission:', err);
+        console.error('Error in checkPermission:', err);
       }
     };
 
-    checkAdminPermission();
+    checkPermission();
   }, [user, isShared, task.id]);
 
   const getPriorityColor = (priority: string) => {
@@ -206,40 +215,47 @@ const TaskCard = ({ task, onStatusChange, onDelete, isShared = false, sharedBy }
               onChange={(e) => onStatusChange(task.id, e.target.value)}
               className="text-base sm:text-sm border border-gray-300 rounded-md px-3 py-2 sm:px-2 sm:py-1 dark:bg-gray-700 dark:border-gray-600 w-full sm:w-auto"
               aria-label="Change task status"
-              disabled={isShared && !isAdmin}
+              disabled={isShared && permissionLevel === 'view'}
             >
               <option value="pending">Pending</option>
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
             </select>
-            {isShared && !isAdmin && (
+            {isShared && permissionLevel === 'view' && (
               <div className="ml-2 text-xs text-gray-500">
-                (Admin permission required to change status)
+                (View-only permission)
               </div>
             )}
           </div>
 
           <div className="flex items-center space-x-4 w-full sm:w-auto justify-between sm:justify-end mt-3 sm:mt-0">
-            <TouchFriendlyButton
-              onClick={() => window.location.href = `/chat/${task.id}`}
-              className="text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 flex items-center px-4 py-2 sm:px-3 sm:py-1 rounded-md hover:bg-primary-50 dark:hover:bg-gray-700 transition-colors"
-              ariaLabel="Chat about this task"
-              title="Chat about this task"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6 sm:h-5 sm:w-5 mr-2 sm:mr-1"
-                viewBox="0 0 20 20"
-                fill="currentColor"
+            {/* Only show chat button for admin permission or task owner */}
+            {(!isShared || permissionLevel === 'admin') ? (
+              <TouchFriendlyButton
+                onClick={() => window.location.href = `/chat/${task.id}`}
+                className="text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 flex items-center px-4 py-2 sm:px-3 sm:py-1 rounded-md hover:bg-primary-50 dark:hover:bg-gray-700 transition-colors"
+                ariaLabel="Chat about this task"
+                title="Chat about this task"
               >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <span className="inline">Chat</span>
-            </TouchFriendlyButton>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6 sm:h-5 sm:w-5 mr-2 sm:mr-1"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span className="inline">Chat</span>
+              </TouchFriendlyButton>
+            ) : (
+              <div className="text-xs text-gray-500 italic px-4 py-2">
+                {permissionLevel === 'edit' ? '(Admin permission needed for AI chat)' : ''}
+              </div>
+            )}
 
             {!isShared && (
               <TouchFriendlyButton
@@ -260,25 +276,28 @@ const TaskCard = ({ task, onStatusChange, onDelete, isShared = false, sharedBy }
               </TouchFriendlyButton>
             )}
 
-            <TouchFriendlyButton
-              onClick={() => onDelete(task.id)}
-              className="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-2 rounded-md hover:bg-red-50 dark:hover:bg-gray-700 transition-colors"
-              title="Delete task"
-              ariaLabel="Delete task"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6 sm:h-5 sm:w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
+            {/* Only show delete button for task owners or admins */}
+            {(!isShared || permissionLevel === 'admin') && (
+              <TouchFriendlyButton
+                onClick={() => onDelete(task.id)}
+                className="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-2 rounded-md hover:bg-red-50 dark:hover:bg-gray-700 transition-colors"
+                title="Delete task"
+                ariaLabel="Delete task"
               >
-                <path
-                  fillRule="evenodd"
-                  d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </TouchFriendlyButton>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6 sm:h-5 sm:w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </TouchFriendlyButton>
+            )}
           </div>
         </div>
       </div>
