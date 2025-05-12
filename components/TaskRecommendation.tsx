@@ -91,7 +91,10 @@ const TaskRecommendation = ({ taskId }: TaskRecommendationProps) => {
   if (!recommendation) {
     return (
       <div className="text-sm text-gray-500 py-2">
-        No AI insights available for this task yet.
+        <div>No AI insights available for this task yet.</div>
+        <div className="mt-2 text-xs">
+          {loading ? 'Loading recommendations...' : 'Try refreshing the page or checking back later.'}
+        </div>
       </div>
     );
   }

@@ -1,10 +1,11 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { Task } from '../types/task';
 import { format, parseISO } from 'date-fns';
 import TaskRecommendation from './TaskRecommendation';
 import AuthContext from './AuthContext';
 import TouchFriendlyButton from './TouchFriendlyButton';
 import TaskShareModal from './TaskShareModal';
+import { supabase } from '../services/supabase';
 
 interface TaskCardProps {
   task: Task;
@@ -18,7 +19,42 @@ const TaskCard = ({ task, onStatusChange, onDelete, isShared = false, sharedBy }
   // Each card has its own expanded state
   const [expanded, setExpanded] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { user } = useContext(AuthContext);
+
+  // Check if the user has admin permissions for this shared task
+  useEffect(() => {
+    const checkAdminPermission = async () => {
+      if (!user || !isShared || !task.id) return;
+
+      try {
+        console.log('Checking admin permission for task:', task.id);
+        const { data, error } = await supabase
+          .from('task_shares')
+          .select('permission_level')
+          .eq('task_id', task.id)
+          .eq('shared_with_id', user.id)
+          .eq('status', 'accepted')
+          .single();
+
+        if (error) {
+          console.error('Error checking admin permission:', error);
+          return;
+        }
+
+        if (data && data.permission_level === 'admin') {
+          console.log('User has admin permission for this task');
+          setIsAdmin(true);
+        } else {
+          console.log('User does not have admin permission for this task:', data?.permission_level);
+        }
+      } catch (err) {
+        console.error('Error in checkAdminPermission:', err);
+      }
+    };
+
+    checkAdminPermission();
+  }, [user, isShared, task.id]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -170,11 +206,17 @@ const TaskCard = ({ task, onStatusChange, onDelete, isShared = false, sharedBy }
               onChange={(e) => onStatusChange(task.id, e.target.value)}
               className="text-base sm:text-sm border border-gray-300 rounded-md px-3 py-2 sm:px-2 sm:py-1 dark:bg-gray-700 dark:border-gray-600 w-full sm:w-auto"
               aria-label="Change task status"
+              disabled={isShared && !isAdmin}
             >
               <option value="pending">Pending</option>
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
             </select>
+            {isShared && !isAdmin && (
+              <div className="ml-2 text-xs text-gray-500">
+                (Admin permission required to change status)
+              </div>
+            )}
           </div>
 
           <div className="flex items-center space-x-4 w-full sm:w-auto justify-between sm:justify-end mt-3 sm:mt-0">
