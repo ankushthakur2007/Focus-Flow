@@ -236,7 +236,24 @@ export const getPendingTaskShares = async (): Promise<TaskShare[]> => {
       .eq('status', 'pending');
 
     if (error) throw error;
-    return data || [];
+
+    // Make sure we handle the nested objects properly
+    return (data || []).map(share => {
+      const taskData = share.tasks || {};
+      const profileData = share.profiles || {};
+
+      return {
+        ...share,
+        tasks: {
+          title: taskData.title || '',
+          description: taskData.description || ''
+        },
+        profiles: {
+          email: profileData.email || '',
+          name: profileData.name || ''
+        }
+      };
+    });
   } catch (error) {
     console.error('Error getting pending task shares:', error);
     throw error;
@@ -263,7 +280,19 @@ export const getTaskShareActivities = async (taskId: string): Promise<TaskShareA
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+
+    // Make sure we handle the nested objects properly
+    return (data || []).map(activity => {
+      const profileData = activity.profiles || {};
+
+      return {
+        ...activity,
+        profiles: {
+          email: profileData.email || '',
+          name: profileData.name || ''
+        }
+      };
+    });
   } catch (error) {
     console.error('Error getting task share activities:', error);
     throw error;
