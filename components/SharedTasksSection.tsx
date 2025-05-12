@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Task, TaskShare } from '../types/task';
 import { getTasksSharedWithMe, getPendingTaskShares, respondToTaskShare } from '../services/taskSharing';
 import TaskCard from './TaskCard';
+import AuthContext from './AuthContext';
+import { supabase } from '../services/supabase';
 
 const SharedTasksSection: React.FC = () => {
+  const { user, loading: authLoading } = useContext(AuthContext);
   const [sharedTasks, setSharedTasks] = useState<Task[]>([]);
   const [pendingShares, setPendingShares] = useState<TaskShare[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -11,18 +14,39 @@ const SharedTasksSection: React.FC = () => {
   const [showPending, setShowPending] = useState<boolean>(false);
 
   useEffect(() => {
-    loadSharedTasks();
-  }, []);
+    // Only load tasks when user is authenticated
+    if (user && !authLoading) {
+      loadSharedTasks();
+    }
+  }, [user, authLoading]);
 
   const loadSharedTasks = async () => {
+    if (!user) {
+      console.error('Cannot load shared tasks: User not authenticated');
+      setError('You must be logged in to view shared tasks');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
+      console.log('Loading shared tasks for user:', user.id);
+
+      // Check if the session is valid
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session found');
+      }
+
       const [tasks, pending] = await Promise.all([
         getTasksSharedWithMe(),
         getPendingTaskShares()
       ]);
+
+      console.log('Loaded shared tasks:', tasks.length);
+      console.log('Loaded pending shares:', pending.length);
 
       setSharedTasks(tasks);
       setPendingShares(pending);
@@ -35,10 +59,18 @@ const SharedTasksSection: React.FC = () => {
   };
 
   const handleRespondToShare = async (taskShareId: string, response: 'accepted' | 'rejected') => {
+    if (!user) {
+      console.error('Cannot respond to task share: User not authenticated');
+      setError('You must be logged in to respond to task shares');
+      return;
+    }
+
     setLoading(true);
 
     try {
+      console.log(`Responding to task share ${taskShareId} with ${response}`);
       await respondToTaskShare(taskShareId, response);
+      console.log('Response successful, reloading data');
       // Reload the data
       loadSharedTasks();
     } catch (err) {
@@ -62,13 +94,27 @@ const SharedTasksSection: React.FC = () => {
     return (
       <div className="py-8">
         <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 p-4 rounded-md">
+          <h3 className="font-bold mb-2">Error</h3>
           <p>{error}</p>
-          <button
-            onClick={loadSharedTasks}
-            className="mt-2 text-sm font-medium text-red-700 dark:text-red-200 underline"
-          >
-            Try Again
-          </button>
+          {!user && (
+            <p className="mt-2 text-sm">
+              Please make sure you are logged in. You may need to refresh the page or log in again.
+            </p>
+          )}
+          <div className="mt-4 flex space-x-3">
+            <button
+              onClick={loadSharedTasks}
+              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md"
+            >
+              Refresh Page
+            </button>
+          </div>
         </div>
       </div>
     );

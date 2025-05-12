@@ -6,29 +6,58 @@ import AuthContext from '../components/AuthContext';
 import ResponsiveContainer from '../components/ResponsiveContainer';
 import SharedTasksSection from '../components/SharedTasksSection';
 import { getPendingTaskShares } from '../services/taskSharing';
+import { supabase } from '../services/supabase';
 
 const SharedTasksPage: NextPage = () => {
-  const { user, loading } = useContext(AuthContext);
+  const { user, loading, session } = useContext(AuthContext);
   const router = useRouter();
   const [pendingCount, setPendingCount] = useState<number>(0);
   const [loadingPending, setLoadingPending] = useState<boolean>(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
+  // Check authentication and redirect if needed
   useEffect(() => {
     if (!loading && !user) {
+      console.log('No authenticated user, redirecting to login');
       router.push('/login');
     }
   }, [user, loading, router]);
 
+  // Verify session is valid
   useEffect(() => {
-    if (user) {
+    const checkSession = async () => {
+      if (user) {
+        try {
+          const { data, error } = await supabase.auth.getSession();
+          if (error || !data.session) {
+            console.error('Session validation error:', error);
+            setAuthError('Your session has expired. Please log in again.');
+            router.push('/login');
+          } else {
+            console.log('Session is valid');
+          }
+        } catch (err) {
+          console.error('Error checking session:', err);
+        }
+      }
+    };
+
+    checkSession();
+  }, [user, router]);
+
+  // Load pending task count
+  useEffect(() => {
+    if (user && !authError) {
       loadPendingCount();
     }
-  }, [user]);
+  }, [user, authError]);
 
   const loadPendingCount = async () => {
     try {
+      console.log('Loading pending task count for user:', user?.id);
       setLoadingPending(true);
       const pendingShares = await getPendingTaskShares();
+      console.log('Pending shares count:', pendingShares.length);
       setPendingCount(pendingShares.length);
     } catch (error) {
       console.error('Error loading pending shares count:', error);
@@ -41,6 +70,23 @@ const SharedTasksPage: NextPage = () => {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
+      </div>
+    );
+  }
+
+  if (authError) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 p-6 rounded-md max-w-md">
+          <h2 className="text-xl font-bold mb-2">Authentication Error</h2>
+          <p className="mb-4">{authError}</p>
+          <button
+            onClick={() => router.push('/login')}
+            className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-md"
+          >
+            Go to Login
+          </button>
+        </div>
       </div>
     );
   }
@@ -60,7 +106,7 @@ const SharedTasksPage: NextPage = () => {
               View and manage tasks shared with you
             </p>
           </div>
-          
+
           {!loadingPending && pendingCount > 0 && (
             <div className="mt-4 sm:mt-0 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-4 py-2 rounded-md flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
