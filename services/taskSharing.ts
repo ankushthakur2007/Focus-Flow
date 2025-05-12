@@ -82,13 +82,16 @@ export const getTaskShares = async (taskId: string): Promise<SharedUser[]> => {
     if (error) throw error;
 
     // Transform the data to match the SharedUser interface
-    return shares.map((share) => ({
-      id: share.shared_with_id,
-      email: share.profiles.email,
-      name: share.profiles.name,
-      permission_level: share.permission_level,
-      status: share.status,
-    }));
+    return shares.map((share) => {
+      const profile = share.profiles || {};
+      return {
+        id: share.shared_with_id,
+        email: profile.email || '',
+        name: profile.name,
+        permission_level: share.permission_level,
+        status: share.status,
+      };
+    });
   } catch (error) {
     console.error('Error getting task shares:', error);
     throw error;
@@ -198,10 +201,11 @@ export const getTasksSharedWithMe = async (): Promise<Task[]> => {
     // Add sharing information to each task
     return tasks.map((task) => {
       const share = shares.find((s) => s.task_id === task.id);
+      const profile = share?.profiles || {};
       return {
         ...task,
         is_shared: true,
-        shared_by: share?.profiles.email || share?.owner_id,
+        shared_by: profile.email || share?.owner_id || '',
       };
     });
   } catch (error) {
