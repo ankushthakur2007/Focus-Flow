@@ -230,7 +230,7 @@ const SharedTasksSection: React.FC = () => {
                         {share.tasks?.description && share.tasks.description.length > 100 ? '...' : ''}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                        Shared by: {share.profiles?.name || share.profiles?.email || 'Unknown'}
+                        Shared by: {share.profiles?.name || share.profiles?.email || share.owner_id || 'Unknown'}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         Permission: {share.permission_level === 'view'

@@ -270,7 +270,7 @@ export const getTasksSharedWithMe = async (): Promise<Task[]> => {
         owner_id,
         permission_level,
         status,
-        profiles:owner_id (id, email, name)
+        owner:owner_id (id, email, name)
       `)
       .eq('shared_with_id', user.id)
       .eq('status', 'accepted');
@@ -312,11 +312,11 @@ export const getTasksSharedWithMe = async (): Promise<Task[]> => {
       const share = shares.find((s) => s.task_id === task.id);
 
       // Use a type assertion to help TypeScript understand the structure
-      const profileData = share?.profiles as { id?: string; email?: string; name?: string } | null | undefined;
+      const ownerData = share?.owner as { id?: string; email?: string; name?: string } | null | undefined;
 
       // Get email safely
-      const email = profileData && typeof profileData.email === 'string' ? profileData.email : '';
-      const name = profileData && typeof profileData.name === 'string' ? profileData.name : '';
+      const email = ownerData && typeof ownerData.email === 'string' ? ownerData.email : '';
+      const name = ownerData && typeof ownerData.name === 'string' ? ownerData.name : '';
       const displayName = name || email || share?.owner_id || 'Unknown';
 
       return {
@@ -377,7 +377,7 @@ export const getPendingTaskShares = async (): Promise<TaskShare[]> => {
         created_at,
         updated_at,
         tasks:task_id (id, title, description),
-        profiles:owner_id (id, email, name)
+        owner:owner_id (id, email, name)
       `)
       .eq('shared_with_id', user.id)
       .eq('status', 'pending');
@@ -397,14 +397,14 @@ export const getPendingTaskShares = async (): Promise<TaskShare[]> => {
     return data.map(share => {
       // Use type assertions to help TypeScript understand the structure
       const taskData = share.tasks as { id?: string; title?: string; description?: string } | null | undefined;
-      const profileData = share.profiles as { id?: string; email?: string; name?: string } | null | undefined;
+      const ownerData = share.owner as { id?: string; email?: string; name?: string } | null | undefined;
 
       // Get properties safely
       const taskId = taskData && typeof taskData.id === 'string' ? taskData.id : '';
       const title = taskData && typeof taskData.title === 'string' ? taskData.title : '';
       const description = taskData && typeof taskData.description === 'string' ? taskData.description : '';
-      const email = profileData && typeof profileData.email === 'string' ? profileData.email : '';
-      const name = profileData && typeof profileData.name === 'string' ? profileData.name : '';
+      const email = ownerData && typeof ownerData.email === 'string' ? ownerData.email : '';
+      const name = ownerData && typeof ownerData.name === 'string' ? ownerData.name : '';
 
       return {
         ...share,
@@ -414,7 +414,7 @@ export const getPendingTaskShares = async (): Promise<TaskShare[]> => {
           description
         },
         profiles: {
-          id: profileData?.id || '',
+          id: ownerData?.id || '',
           email,
           name
         }
@@ -440,7 +440,7 @@ export const getTaskShareActivities = async (taskId: string): Promise<TaskShareA
         activity_type,
         activity_data,
         created_at,
-        profiles:user_id (email, name)
+        user:user_id (email, name)
       `)
       .eq('task_id', taskId)
       .order('created_at', { ascending: false });
@@ -450,11 +450,11 @@ export const getTaskShareActivities = async (taskId: string): Promise<TaskShareA
     // Make sure we handle the nested objects properly
     return (data || []).map(activity => {
       // Use a type assertion to help TypeScript understand the structure
-      const profileData = activity.profiles as { email?: string; name?: string } | null | undefined;
+      const userData = activity.user as { email?: string; name?: string } | null | undefined;
 
       // Get properties safely
-      const email = profileData && typeof profileData.email === 'string' ? profileData.email : '';
-      const name = profileData && typeof profileData.name === 'string' ? profileData.name : '';
+      const email = userData && typeof userData.email === 'string' ? userData.email : '';
+      const name = userData && typeof userData.name === 'string' ? userData.name : '';
 
       return {
         ...activity,
