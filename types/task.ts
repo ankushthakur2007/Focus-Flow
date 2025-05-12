@@ -21,6 +21,16 @@ export interface TaskShare {
   status: 'pending' | 'accepted' | 'rejected';
   created_at: string;
   updated_at?: string;
+  tasks?: {
+    id: string;
+    title: string;
+    description?: string;
+  };
+  profiles?: {
+    id: string;
+    email: string;
+    name?: string;
+  };
 }
 
 export interface TaskShareActivity {
