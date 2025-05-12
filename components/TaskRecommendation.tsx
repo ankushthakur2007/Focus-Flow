@@ -17,6 +17,19 @@ const TaskRecommendation = ({ taskId }: TaskRecommendationProps) => {
     const fetchRecommendation = async () => {
       setLoading(true);
       try {
+        // First, get the task to check if it's a shared task
+        const { data: taskData, error: taskError } = await supabase
+          .from('tasks')
+          .select('user_id')
+          .eq('id', taskId)
+          .single();
+
+        if (taskError) {
+          console.error('Error fetching task:', taskError);
+          throw taskError;
+        }
+
+        // Get the recommendation
         const { data, error } = await supabase
           .from('recommendations')
           .select('*')
@@ -24,13 +37,37 @@ const TaskRecommendation = ({ taskId }: TaskRecommendationProps) => {
           .order('created_at', { ascending: false })
           .limit(1);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching recommendation:', error);
+          throw error;
+        }
 
         if (data && data.length > 0) {
           setRecommendation(data[0] as Recommendation);
+        } else {
+          // If no recommendation found, check if this is a shared task
+          // and try to fetch the recommendation using the task owner's user_id
+          if (taskData) {
+            console.log('Trying to fetch recommendation for shared task with owner ID:', taskData.user_id);
+
+            const { data: sharedData, error: sharedError } = await supabase
+              .from('recommendations')
+              .select('*')
+              .eq('task_id', taskId)
+              .eq('user_id', taskData.user_id)
+              .order('created_at', { ascending: false })
+              .limit(1);
+
+            if (sharedError) {
+              console.error('Error fetching shared recommendation:', sharedError);
+            } else if (sharedData && sharedData.length > 0) {
+              console.log('Found recommendation for shared task:', sharedData[0]);
+              setRecommendation(sharedData[0] as Recommendation);
+            }
+          }
         }
       } catch (error) {
-        console.error('Error fetching recommendation:', error);
+        console.error('Error in recommendation flow:', error);
       } finally {
         setLoading(false);
       }

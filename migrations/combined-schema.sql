@@ -50,6 +50,16 @@ CREATE TABLE IF NOT EXISTS recommendations (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create task_chats table for task-specific chat
+CREATE TABLE IF NOT EXISTS task_chats (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  task_id UUID REFERENCES tasks(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  message TEXT NOT NULL,
+  is_user BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- =============================================
 -- ANALYTICS TABLES
 -- =============================================
@@ -239,6 +249,7 @@ ALTER TABLE analytics_category ENABLE ROW LEVEL SECURITY;
 ALTER TABLE analytics_weekly ENABLE ROW LEVEL SECURITY;
 ALTER TABLE task_shares ENABLE ROW LEVEL SECURITY;
 ALTER TABLE task_share_activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_chats ENABLE ROW LEVEL SECURITY;
 
 -- =============================================
 -- FUNCTIONS AND TRIGGERS
@@ -425,9 +436,18 @@ CREATE POLICY "Users can delete their own moods"
 
 -- Policies for recommendations
 DROP POLICY IF EXISTS "Users can view their own recommendations" ON recommendations;
-CREATE POLICY "Users can view their own recommendations"
+DROP POLICY IF EXISTS "Users can view their own and shared task recommendations" ON recommendations;
+CREATE POLICY "Users can view their own and shared task recommendations"
   ON recommendations FOR SELECT
-  USING (auth.uid() = user_id);
+  USING (
+    auth.uid() = user_id OR
+    EXISTS (
+      SELECT 1 FROM task_shares
+      WHERE task_shares.task_id = recommendations.task_id
+      AND task_shares.shared_with_id = auth.uid()
+      AND task_shares.status = 'accepted'
+    )
+  );
 
 DROP POLICY IF EXISTS "Users can insert their own recommendations" ON recommendations;
 CREATE POLICY "Users can insert their own recommendations"
@@ -558,6 +578,51 @@ WITH CHECK (
     )
   )
 );
+
+-- Policies for task_chats
+DROP POLICY IF EXISTS "Users can view their own task chats" ON task_chats;
+DROP POLICY IF EXISTS "Users can view their own and shared task chats" ON task_chats;
+CREATE POLICY "Users can view their own and shared task chats"
+ON task_chats FOR SELECT
+USING (
+  auth.uid() = user_id OR
+  EXISTS (
+    SELECT 1 FROM task_shares
+    WHERE task_shares.task_id = task_chats.task_id
+    AND task_shares.shared_with_id = auth.uid()
+    AND task_shares.status = 'accepted'
+  ) OR
+  EXISTS (
+    SELECT 1 FROM tasks
+    WHERE tasks.id = task_chats.task_id
+    AND tasks.user_id = auth.uid()
+  )
+);
+
+DROP POLICY IF EXISTS "Users can insert their own task chats" ON task_chats;
+DROP POLICY IF EXISTS "Users can insert chats for tasks they have access to" ON task_chats;
+CREATE POLICY "Users can insert chats for tasks they have access to"
+ON task_chats FOR INSERT
+WITH CHECK (
+  auth.uid() = user_id AND (
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_chats.task_id
+      AND tasks.user_id = auth.uid()
+    ) OR
+    EXISTS (
+      SELECT 1 FROM task_shares
+      WHERE task_shares.task_id = task_chats.task_id
+      AND task_shares.shared_with_id = auth.uid()
+      AND task_shares.status = 'accepted'
+    )
+  )
+);
+
+DROP POLICY IF EXISTS "Users can delete their own task chats" ON task_chats;
+CREATE POLICY "Users can delete their own task chats"
+ON task_chats FOR DELETE
+USING (auth.uid() = user_id);
 
 -- Grant permissions for the views
 GRANT SELECT ON task_shares_with_profiles TO authenticated;
