@@ -142,6 +142,44 @@ CREATE TABLE IF NOT EXISTS task_share_activities (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create explicit views for task sharing with profile information
+CREATE OR REPLACE VIEW task_shares_with_profiles AS
+SELECT
+  ts.id,
+  ts.task_id,
+  ts.owner_id,
+  ts.shared_with_id,
+  ts.permission_level,
+  ts.status,
+  ts.created_at,
+  ts.updated_at,
+  owner.email AS owner_email,
+  owner.name AS owner_name,
+  shared.email AS shared_with_email,
+  shared.name AS shared_with_name
+FROM
+  task_shares ts
+LEFT JOIN
+  profiles owner ON ts.owner_id = owner.id
+LEFT JOIN
+  profiles shared ON ts.shared_with_id = shared.id;
+
+-- Create view for task share activities with profile information
+CREATE OR REPLACE VIEW task_share_activities_with_profiles AS
+SELECT
+  tsa.id,
+  tsa.task_id,
+  tsa.user_id,
+  tsa.activity_type,
+  tsa.activity_data,
+  tsa.created_at,
+  p.email AS user_email,
+  p.name AS user_name
+FROM
+  task_share_activities tsa
+LEFT JOIN
+  profiles p ON tsa.user_id = p.id;
+
 -- =============================================
 -- INDEXES
 -- =============================================

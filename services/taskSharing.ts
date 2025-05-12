@@ -262,43 +262,22 @@ export const getTasksSharedWithMe = async (): Promise<Task[]> => {
     console.log('Authenticated user ID:', user.id);
     console.log('Session expires at:', sessionData.session.expires_at);
 
-    // Get tasks shared with the current user
+    // Get tasks shared with the current user using the view with profile information
     const { data: shares, error: sharesError } = await supabase
-      .from('task_shares')
+      .from('task_shares_with_profiles')
       .select(`
         id,
         task_id,
         owner_id,
         permission_level,
-        status
+        status,
+        owner_email,
+        owner_name
       `)
       .eq('shared_with_id', user.id)
       .eq('status', 'accepted');
 
-    // If we have shares, get the owner profiles separately
-    if (shares && shares.length > 0) {
-      console.log('Getting owner profiles for shared tasks...');
-      const ownerIds = [...new Set(shares.map(share => share.owner_id))];
-
-      const { data: ownerProfiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, email, name')
-        .in('id', ownerIds);
-
-      if (profilesError) {
-        console.error('Error fetching owner profiles:', profilesError);
-      } else if (ownerProfiles) {
-        console.log('Owner profiles found:', ownerProfiles.length);
-
-        // Add owner profile data to each share
-        shares.forEach(share => {
-          const ownerProfile = ownerProfiles.find(profile => profile.id === share.owner_id);
-          if (ownerProfile) {
-            share.owner_profile = ownerProfile;
-          }
-        });
-      }
-    }
+    console.log('Fetched shared tasks with profiles:', shares?.length || 0);
 
     if (sharesError) {
       console.error('Error fetching shared tasks:', sharesError);
@@ -336,13 +315,10 @@ export const getTasksSharedWithMe = async (): Promise<Task[]> => {
     return tasks.map((task) => {
       const share = shares.find((s) => s.task_id === task.id);
 
-      // Use a type assertion to help TypeScript understand the structure
-      const ownerProfile = share?.owner_profile as { id?: string; email?: string; name?: string } | null | undefined;
-
-      // Get email safely
-      const email = ownerProfile && typeof ownerProfile.email === 'string' ? ownerProfile.email : '';
-      const name = ownerProfile && typeof ownerProfile.name === 'string' ? ownerProfile.name : '';
-      const displayName = name || email || share?.owner_id || 'Unknown';
+      // Get owner information from the view
+      const ownerEmail = share?.owner_email || '';
+      const ownerName = share?.owner_name || '';
+      const displayName = ownerName || ownerEmail || share?.owner_id || 'Unknown';
 
       return {
         ...task,
@@ -389,9 +365,9 @@ export const getPendingTaskShares = async (): Promise<TaskShare[]> => {
     console.log('Authenticated user ID:', user.id);
     console.log('Session expires at:', sessionData.session.expires_at);
 
-    // Get pending task shares for the current user
+    // Get pending task shares for the current user using the view with profile information
     const { data, error } = await supabase
-      .from('task_shares')
+      .from('task_shares_with_profiles')
       .select(`
         id,
         task_id,
@@ -401,35 +377,14 @@ export const getPendingTaskShares = async (): Promise<TaskShare[]> => {
         status,
         created_at,
         updated_at,
+        owner_email,
+        owner_name,
         tasks:task_id (id, title, description)
       `)
       .eq('shared_with_id', user.id)
       .eq('status', 'pending');
 
-    // If we have pending shares, get the owner profiles separately
-    if (data && data.length > 0) {
-      console.log('Getting owner profiles for pending shares...');
-      const ownerIds = [...new Set(data.map(share => share.owner_id))];
-
-      const { data: ownerProfiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, email, name')
-        .in('id', ownerIds);
-
-      if (profilesError) {
-        console.error('Error fetching owner profiles for pending shares:', profilesError);
-      } else if (ownerProfiles) {
-        console.log('Owner profiles found for pending shares:', ownerProfiles.length);
-
-        // Add owner profile data to each share
-        data.forEach(share => {
-          const ownerProfile = ownerProfiles.find(profile => profile.id === share.owner_id);
-          if (ownerProfile) {
-            share.owner_profile = ownerProfile;
-          }
-        });
-      }
-    }
+    console.log('Fetched pending task shares with profiles:', data?.length || 0);
 
     if (error) {
       console.error('Error fetching pending task shares:', error);
@@ -446,14 +401,13 @@ export const getPendingTaskShares = async (): Promise<TaskShare[]> => {
     return data.map(share => {
       // Use type assertions to help TypeScript understand the structure
       const taskData = share.tasks as { id?: string; title?: string; description?: string } | null | undefined;
-      const ownerProfile = share.owner_profile as { id?: string; email?: string; name?: string } | null | undefined;
 
       // Get properties safely
       const taskId = taskData && typeof taskData.id === 'string' ? taskData.id : '';
       const title = taskData && typeof taskData.title === 'string' ? taskData.title : '';
       const description = taskData && typeof taskData.description === 'string' ? taskData.description : '';
-      const email = ownerProfile && typeof ownerProfile.email === 'string' ? ownerProfile.email : '';
-      const name = ownerProfile && typeof ownerProfile.name === 'string' ? ownerProfile.name : '';
+      const email = share.owner_email || '';
+      const name = share.owner_name || '';
 
       return {
         ...share,
@@ -463,7 +417,7 @@ export const getPendingTaskShares = async (): Promise<TaskShare[]> => {
           description
         },
         profiles: {
-          id: ownerProfile?.id || share.owner_id || '',
+          id: share.owner_id || '',
           email,
           name
         }
@@ -481,58 +435,34 @@ export const getPendingTaskShares = async (): Promise<TaskShare[]> => {
 export const getTaskShareActivities = async (taskId: string): Promise<TaskShareActivity[]> => {
   try {
     const { data, error } = await supabase
-      .from('task_share_activities')
+      .from('task_share_activities_with_profiles')
       .select(`
         id,
         task_id,
         user_id,
         activity_type,
         activity_data,
-        created_at
+        created_at,
+        user_email,
+        user_name
       `)
       .eq('task_id', taskId)
       .order('created_at', { ascending: false });
 
-    // If we have activities, get the user profiles separately
-    if (data && data.length > 0) {
-      console.log('Getting user profiles for activities...');
-      const userIds = [...new Set(data.map(activity => activity.user_id))];
-
-      const { data: userProfiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, email, name')
-        .in('id', userIds);
-
-      if (profilesError) {
-        console.error('Error fetching user profiles for activities:', profilesError);
-      } else if (userProfiles) {
-        console.log('User profiles found for activities:', userProfiles.length);
-
-        // Add user profile data to each activity
-        data.forEach(activity => {
-          const userProfile = userProfiles.find(profile => profile.id === activity.user_id);
-          if (userProfile) {
-            activity.user_profile = userProfile;
-          }
-        });
-      }
-    }
+    console.log('Fetched task share activities with profiles:', data?.length || 0);
 
     if (error) throw error;
 
     // Make sure we handle the nested objects properly
     return (data || []).map(activity => {
-      // Use a type assertion to help TypeScript understand the structure
-      const userProfile = activity.user_profile as { id?: string; email?: string; name?: string } | null | undefined;
-
-      // Get properties safely
-      const email = userProfile && typeof userProfile.email === 'string' ? userProfile.email : '';
-      const name = userProfile && typeof userProfile.name === 'string' ? userProfile.name : '';
+      // Get user information from the view
+      const email = activity.user_email || '';
+      const name = activity.user_name || '';
 
       return {
         ...activity,
         profiles: {
-          id: userProfile?.id || activity.user_id || '',
+          id: activity.user_id || '',
           email,
           name
         }
