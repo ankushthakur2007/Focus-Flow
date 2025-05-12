@@ -164,6 +164,10 @@ LEFT JOIN
 LEFT JOIN
   profiles shared ON ts.shared_with_id = shared.id;
 
+-- Create index on profiles.email to speed up email lookups
+CREATE INDEX IF NOT EXISTS profiles_email_idx ON profiles(email);
+CREATE INDEX IF NOT EXISTS profiles_email_lower_idx ON profiles(LOWER(email));
+
 -- Create view for task share activities with profile information
 CREATE OR REPLACE VIEW task_share_activities_with_profiles AS
 SELECT
@@ -550,3 +554,23 @@ WITH CHECK (
 -- Grant permissions for the views
 GRANT SELECT ON task_shares_with_profiles TO authenticated;
 GRANT SELECT ON task_share_activities_with_profiles TO authenticated;
+
+-- Create a function to find a user by email (case insensitive)
+DROP FUNCTION IF EXISTS find_user_by_email(text);
+CREATE OR REPLACE FUNCTION find_user_by_email(search_email TEXT)
+RETURNS TABLE (
+  id UUID,
+  email TEXT,
+  name TEXT
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT p.id, p.email, p.name
+  FROM profiles p
+  WHERE LOWER(p.email) = LOWER(search_email)
+  LIMIT 1;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant permission to use the function
+GRANT EXECUTE ON FUNCTION find_user_by_email(text) TO authenticated;

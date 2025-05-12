@@ -13,30 +13,26 @@ export const shareTask = async (
     // First, find the user by email - try multiple approaches
     console.log(`Looking for user with email: ${sharedWithEmail}`);
 
-    // Try exact match first
-    let { data: users, error: userError } = await supabase
-      .from('profiles')
-      .select('id, email')
-      .eq('email', sharedWithEmail)
-      .limit(1);
+    // Try using the database function for case-insensitive lookup
+    let { data: users, error: userError } = await supabase.rpc(
+      'find_user_by_email',
+      { search_email: sharedWithEmail }
+    );
 
     if (userError) {
-      console.error('Error with exact email match:', userError);
-    }
+      console.error('Error with find_user_by_email function:', userError);
 
-    // If exact match fails, try case-insensitive match
-    if (!users || users.length === 0) {
-      console.log('Exact match failed, trying case-insensitive match');
-      const { data: usersIlike, error: userIlikeError } = await supabase
+      // Fall back to direct query if the function fails
+      const { data: directUsers, error: directError } = await supabase
         .from('profiles')
         .select('id, email')
         .ilike('email', sharedWithEmail)
         .limit(1);
 
-      if (userIlikeError) {
-        console.error('Error with ilike email match:', userIlikeError);
+      if (directError) {
+        console.error('Error with direct email match:', directError);
       } else {
-        users = usersIlike;
+        users = directUsers;
       }
     }
 
