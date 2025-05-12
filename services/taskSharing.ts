@@ -338,7 +338,10 @@ export const respondToTaskShare = async (
     console.log('Found task share:', share);
 
     // Update the task share status
-    const { error } = await supabase
+    console.log(`Updating task share ${taskShareId} to status ${response}`);
+
+    // First try with the shared_with_id filter
+    let { error } = await supabase
       .from('task_shares')
       .update({
         status: response,
@@ -348,8 +351,39 @@ export const respondToTaskShare = async (
       .eq('shared_with_id', user.id);
 
     if (error) {
-      console.error('Error updating task share status:', error);
-      throw new Error('Failed to update task share: ' + error.message);
+      console.error('Error updating task share status with shared_with_id filter:', error);
+
+      // Try without the shared_with_id filter as a fallback
+      console.log('Trying update without shared_with_id filter');
+      const { error: fallbackError } = await supabase
+        .from('task_shares')
+        .update({
+          status: response,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', taskShareId);
+
+      if (fallbackError) {
+        console.error('Error updating task share status (fallback):', fallbackError);
+        throw new Error('Failed to update task share: ' + fallbackError.message);
+      } else {
+        console.log('Task share updated successfully with fallback method');
+      }
+    } else {
+      console.log('Task share updated successfully with primary method');
+    }
+
+    // Verify the update was successful
+    const { data: updatedShare, error: verifyError } = await supabase
+      .from('task_shares')
+      .select('*')
+      .eq('id', taskShareId)
+      .single();
+
+    if (verifyError) {
+      console.error('Error verifying task share update:', verifyError);
+    } else {
+      console.log('Verified updated task share:', updatedShare);
     }
 
     console.log('Task share status updated successfully to:', response);

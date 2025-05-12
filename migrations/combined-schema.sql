@@ -510,9 +510,10 @@ ON task_shares FOR INSERT
 WITH CHECK (auth.uid() = owner_id);
 
 DROP POLICY IF EXISTS "Users can update their own shares" ON task_shares;
-CREATE POLICY "Users can update their own shares"
+DROP POLICY IF EXISTS "Users can update shares they own or received" ON task_shares;
+CREATE POLICY "Users can update shares they own or received"
 ON task_shares FOR UPDATE
-USING (auth.uid() = owner_id);
+USING (auth.uid() = owner_id OR auth.uid() = shared_with_id);
 
 DROP POLICY IF EXISTS "Users can delete their own shares" ON task_shares;
 CREATE POLICY "Users can delete their own shares"

@@ -12,6 +12,7 @@ const SharedTasksSection: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showPending, setShowPending] = useState<boolean>(false);
+  const [respondingShares, setRespondingShares] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     // Only load tasks when user is authenticated
@@ -97,7 +98,8 @@ const SharedTasksSection: React.FC = () => {
       return;
     }
 
-    setLoading(true);
+    // Set loading state for this specific share
+    setRespondingShares(prev => ({ ...prev, [taskShareId]: true }));
     setError(null);
 
     try {
@@ -115,11 +117,41 @@ const SharedTasksSection: React.FC = () => {
         throw new Error('Your session has expired. Please log in again.');
       }
 
+      // Get the task share details before updating
+      const { data: shareBeforeUpdate, error: fetchError } = await supabase
+        .from('task_shares')
+        .select('*')
+        .eq('id', taskShareId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching task share before update:', fetchError);
+      } else {
+        console.log('Task share before update:', shareBeforeUpdate);
+      }
+
+      // Attempt to respond to the task share
       await respondToTaskShare(taskShareId, response);
       console.log('Response successful, reloading data');
 
+      // Get the task share details after updating to verify
+      const { data: shareAfterUpdate, error: verifyError } = await supabase
+        .from('task_shares')
+        .select('*')
+        .eq('id', taskShareId)
+        .single();
+
+      if (verifyError) {
+        console.error('Error fetching task share after update:', verifyError);
+      } else {
+        console.log('Task share after update:', shareAfterUpdate);
+      }
+
       // Reload the data
       loadSharedTasks();
+
+      // Clear the loading state for this specific share
+      setRespondingShares(prev => ({ ...prev, [taskShareId]: false }));
     } catch (err: any) {
       console.error('Error responding to task share:', err);
 
@@ -130,7 +162,27 @@ const SharedTasksSection: React.FC = () => {
         setError('Failed to respond to task share');
       }
 
-      setLoading(false);
+      // Try to get more information about the error
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        console.log('Current user ID:', currentUser?.id);
+
+        const { data: shareData, error: shareError } = await supabase
+          .from('task_shares')
+          .select('*')
+          .eq('id', taskShareId);
+
+        if (shareError) {
+          console.error('Error fetching task share for debugging:', shareError);
+        } else {
+          console.log('Task share data for debugging:', shareData);
+        }
+      } catch (debugErr) {
+        console.error('Error during debugging:', debugErr);
+      }
+
+      // Clear the loading state for this specific share
+      setRespondingShares(prev => ({ ...prev, [taskShareId]: false }));
     }
   };
 
@@ -242,20 +294,29 @@ const SharedTasksSection: React.FC = () => {
                     </div>
 
                     <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleRespondToShare(share.id, 'accepted')}
-                        className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-md"
-                        disabled={loading}
-                      >
-                        Accept
-                      </button>
-                      <button
-                        onClick={() => handleRespondToShare(share.id, 'rejected')}
-                        className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-md"
-                        disabled={loading}
-                      >
-                        Decline
-                      </button>
+                      {respondingShares[share.id] ? (
+                        <div className="flex items-center space-x-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary-500"></div>
+                          <span className="text-sm text-gray-500">Processing...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleRespondToShare(share.id, 'accepted')}
+                            className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-md"
+                            disabled={Object.values(respondingShares).some(v => v)}
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => handleRespondToShare(share.id, 'rejected')}
+                            className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-md"
+                            disabled={Object.values(respondingShares).some(v => v)}
+                          >
+                            Decline
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
