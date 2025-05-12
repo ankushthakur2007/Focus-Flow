@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface TouchFriendlyButtonProps {
-  onClick: () => void;
+  onClick?: () => void;
   className?: string;
   disabled?: boolean;
   type?: 'button' | 'submit' | 'reset';
@@ -25,7 +25,7 @@ const TouchFriendlyButton: React.FC<TouchFriendlyButtonProps> = ({
 }) => {
   // Base classes for touch-friendly buttons
   const baseClasses = 'min-h-[44px] min-w-[44px] p-3 flex items-center justify-center';
-  
+
   return (
     <button
       type={type}
