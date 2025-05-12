@@ -17,13 +17,13 @@ const SharedTasksSection: React.FC = () => {
   const loadSharedTasks = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const [tasks, pending] = await Promise.all([
         getTasksSharedWithMe(),
         getPendingTaskShares()
       ]);
-      
+
       setSharedTasks(tasks);
       setPendingShares(pending);
     } catch (err) {
@@ -36,7 +36,7 @@ const SharedTasksSection: React.FC = () => {
 
   const handleRespondToShare = async (taskShareId: string, response: 'accepted' | 'rejected') => {
     setLoading(true);
-    
+
     try {
       await respondToTaskShare(taskShareId, response);
       // Reload the data
@@ -87,7 +87,7 @@ const SharedTasksSection: React.FC = () => {
               {showPending ? 'Hide' : 'Show'} ({pendingShares.length})
             </button>
           </div>
-          
+
           {showPending && (
             <div className="space-y-4">
               {pendingShares.map((share) => (
@@ -103,14 +103,14 @@ const SharedTasksSection: React.FC = () => {
                         Shared by: {share.profiles?.name || share.profiles?.email || 'Unknown'}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Permission: {share.permission_level === 'view' 
-                          ? 'View Only' 
+                        Permission: {share.permission_level === 'view'
+                          ? 'View Only'
                           : share.permission_level === 'edit'
                           ? 'Can Edit'
                           : 'Admin'}
                       </p>
                     </div>
-                    
+
                     <div className="flex space-x-2">
                       <button
                         onClick={() => handleRespondToShare(share.id, 'accepted')}
@@ -134,10 +134,10 @@ const SharedTasksSection: React.FC = () => {
           )}
         </div>
       )}
-      
+
       <div>
         <h2 className="text-xl font-bold mb-4">Shared With Me</h2>
-        
+
         {sharedTasks.length === 0 ? (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center">
             <p className="text-gray-600 dark:text-gray-400">No tasks have been shared with you yet.</p>
@@ -149,6 +149,7 @@ const SharedTasksSection: React.FC = () => {
                 key={task.id}
                 task={task}
                 onStatusChange={() => loadSharedTasks()}
+                onDelete={() => loadSharedTasks()}
                 isShared={true}
                 sharedBy={task.shared_by}
               />
