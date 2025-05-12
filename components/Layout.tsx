@@ -3,6 +3,8 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import AuthContext from './AuthContext';
+import ThemeToggle from './ThemeToggle';
+import KeyboardShortcutsHelp from './KeyboardShortcutsHelp';
 import Footer from './Footer';
 
 interface LayoutProps {
@@ -24,6 +26,65 @@ const Layout = ({ children }: LayoutProps) => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Add keyboard shortcuts for navigation
+  useEffect(() => {
+    let keysPressed: Record<string, boolean> = {};
+    let keyTimeout: NodeJS.Timeout | null = null;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle if not in an input field
+      if (
+        document.activeElement?.tagName === 'INPUT' ||
+        document.activeElement?.tagName === 'TEXTAREA' ||
+        document.activeElement?.getAttribute('contenteditable') === 'true'
+      ) {
+        return;
+      }
+
+      keysPressed[event.key] = true;
+
+      // Clear previous timeout
+      if (keyTimeout) {
+        clearTimeout(keyTimeout);
+      }
+
+      // Set a timeout to clear the keys pressed
+      keyTimeout = setTimeout(() => {
+        keysPressed = {};
+      }, 1000);
+
+      // Navigation shortcuts with 'g' prefix
+      if (keysPressed['g'] || keysPressed['G']) {
+        if (keysPressed['t'] || keysPressed['T']) {
+          // Go to Tasks
+          router.push('/tasks');
+          keysPressed = {};
+        } else if (keysPressed['m'] || keysPressed['M']) {
+          // Go to Mood
+          router.push('/mood');
+          keysPressed = {};
+        } else if (keysPressed['p'] || keysPressed['P']) {
+          // Go to Personalized
+          router.push('/personalized');
+          keysPressed = {};
+        } else if (keysPressed['u'] || keysPressed['U']) {
+          // Go to Profile (user)
+          router.push('/profile');
+          keysPressed = {};
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (keyTimeout) {
+        clearTimeout(keyTimeout);
+      }
+    };
+  }, [router]);
 
   const isActive = (path: string) => router.pathname === path;
 
@@ -48,6 +109,11 @@ const Layout = ({ children }: LayoutProps) => {
                     <Link href="/" className="text-xl font-bold text-primary-500">
                       FocusFlow
                     </Link>
+                  </div>
+
+                  {/* Theme Toggle (Mobile) */}
+                  <div className="md:hidden flex items-center">
+                    <ThemeToggle />
                   </div>
 
                   {/* Desktop Navigation */}
@@ -93,6 +159,11 @@ const Layout = ({ children }: LayoutProps) => {
                       Profile
                     </Link>
                   </nav>
+
+                  {/* Desktop Theme Toggle */}
+                  <div className="hidden md:flex items-center mr-4">
+                    <ThemeToggle />
+                  </div>
 
                   {/* Mobile Menu Button */}
                   <button
@@ -186,6 +257,9 @@ const Layout = ({ children }: LayoutProps) => {
         </main>
 
         <Footer />
+
+        {/* Keyboard Shortcuts Help */}
+        <KeyboardShortcutsHelp />
       </div>
     </>
   );

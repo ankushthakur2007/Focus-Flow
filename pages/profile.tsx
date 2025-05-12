@@ -1,12 +1,13 @@
 import { useState, useEffect, useContext } from 'react';
 import { supabase } from '../services/supabase';
 import AuthContext from '../components/AuthContext';
+import { useTheme } from '../components/ThemeContext';
 import { logoutUser } from '../services/auth';
 import { useRouter } from 'next/router';
 
 const ProfilePage = () => {
   const [name, setName] = useState<string>('');
-  const [darkMode, setDarkMode] = useState<boolean>(false);
+  const { darkMode, setDarkMode } = useTheme();
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -28,7 +29,7 @@ const ProfilePage = () => {
 
         if (data) {
           setName(data.name || '');
-          setDarkMode(data.dark_mode || false);
+          // Dark mode is now managed by ThemeContext
         }
       } catch (error) {
         console.error('Error fetching user profile:', error);
@@ -40,14 +41,7 @@ const ProfilePage = () => {
     fetchUserProfile();
   }, [user]);
 
-  useEffect(() => {
-    // Apply dark mode to the document
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
+  // Dark mode is now managed by ThemeContext
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
