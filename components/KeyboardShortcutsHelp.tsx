@@ -9,15 +9,15 @@ const KeyboardShortcutsHelp: React.FC = () => {
       if (event.shiftKey && event.key === '?') {
         setIsOpen(prev => !prev);
       }
-      
+
       // Close with Escape key
       if (event.key === 'Escape' && isOpen) {
         setIsOpen(false);
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
-    
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
@@ -78,7 +78,7 @@ const KeyboardShortcutsHelp: React.FC = () => {
               </svg>
             </button>
           </div>
-          
+
           <div className="space-y-4">
             <div>
               <h3 className="font-medium text-lg mb-2">General</h3>
@@ -93,7 +93,7 @@ const KeyboardShortcutsHelp: React.FC = () => {
                 </li>
               </ul>
             </div>
-            
+
             <div>
               <h3 className="font-medium text-lg mb-2">Navigation</h3>
               <ul className="space-y-2">
@@ -110,13 +110,17 @@ const KeyboardShortcutsHelp: React.FC = () => {
                   <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm">G + P</kbd>
                 </li>
                 <li className="flex justify-between">
+                  <span>Go to Analytics</span>
+                  <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm">G + A</kbd>
+                </li>
+                <li className="flex justify-between">
                   <span>Go to Profile</span>
                   <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm">G + U</kbd>
                 </li>
               </ul>
             </div>
           </div>
-          
+
           <div className="mt-6 text-sm text-gray-500 dark:text-gray-400">
             Press <kbd className="px-1 bg-gray-100 dark:bg-gray-700 rounded">Esc</kbd> to close this dialog
           </div>

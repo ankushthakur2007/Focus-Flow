@@ -68,6 +68,10 @@ const Layout = ({ children }: LayoutProps) => {
           // Go to Personalized
           router.push('/personalized');
           keysPressed = {};
+        } else if (keysPressed['a'] || keysPressed['A']) {
+          // Go to Analytics
+          router.push('/analytics');
+          keysPressed = {};
         } else if (keysPressed['u'] || keysPressed['U']) {
           // Go to Profile (user)
           router.push('/profile');
@@ -147,6 +151,16 @@ const Layout = ({ children }: LayoutProps) => {
                       }`}
                     >
                       Personalized
+                    </Link>
+                    <Link
+                      href="/analytics"
+                      className={`px-3 py-2 rounded-md text-sm font-medium ${
+                        isActive('/analytics')
+                          ? 'bg-primary-500 text-white'
+                          : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      Analytics
                     </Link>
                     <Link
                       href="/profile"
@@ -231,6 +245,17 @@ const Layout = ({ children }: LayoutProps) => {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Personalized
+                  </Link>
+                  <Link
+                    href="/analytics"
+                    className={`px-3 py-3 rounded-md text-sm font-medium ${
+                      isActive('/analytics')
+                        ? 'bg-primary-500 text-white'
+                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Analytics
                   </Link>
                   <Link
                     href="/profile"
