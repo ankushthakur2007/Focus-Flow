@@ -517,20 +517,25 @@ export const getTasksSharedWithMe = async (): Promise<Task[]> => {
 
       // Try to construct tasks from the view data as a fallback
       console.log('Constructing tasks from view data as fallback');
-      return shares.map(share => ({
-        id: share.task_id,
-        title: share.task_title || 'Untitled Task',
-        description: share.task_description || '',
-        status: share.task_status || 'todo',
-        priority: share.task_priority || 'medium',
-        category: share.task_category || '',
-        due_date: null,
-        user_id: share.owner_id,
-        created_at: share.created_at,
-        updated_at: share.updated_at,
-        is_shared: true,
-        shared_by: share.owner_name || share.owner_email || share.owner_id || 'Unknown'
-      }));
+      return shares.map(share => {
+        // Get the current timestamp for created_at and updated_at
+        const now = new Date().toISOString();
+
+        return {
+          id: share.task_id,
+          title: share.task_title || 'Untitled Task',
+          description: share.task_description || '',
+          status: share.task_status || 'todo',
+          priority: share.task_priority || 'medium',
+          category: share.task_category || '',
+          due_date: null,
+          user_id: share.owner_id,
+          created_at: now,
+          updated_at: now,
+          is_shared: true,
+          shared_by: share.owner_name || share.owner_email || share.owner_id || 'Unknown'
+        };
+      });
     }
 
     console.log('Task details found:', tasks.length);
