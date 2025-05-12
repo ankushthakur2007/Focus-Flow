@@ -234,6 +234,7 @@ ALTER TABLE task_share_activities ENABLE ROW LEVEL SECURITY;
 -- =============================================
 
 -- Function to handle new user creation
+DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -244,11 +245,13 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Trigger for new user creation
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- Function to update analytics when tasks change
+DROP FUNCTION IF EXISTS update_analytics_on_task_change() CASCADE;
 CREATE OR REPLACE FUNCTION update_analytics_on_task_change()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -288,6 +291,7 @@ FOR EACH ROW
 EXECUTE FUNCTION update_analytics_on_task_change();
 
 -- Function to log task sharing activities
+DROP FUNCTION IF EXISTS log_task_activity() CASCADE;
 CREATE OR REPLACE FUNCTION log_task_activity()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -309,16 +313,19 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Triggers for task sharing
+DROP TRIGGER IF EXISTS task_share_insert_trigger ON task_shares;
 CREATE TRIGGER task_share_insert_trigger
 AFTER INSERT ON task_shares
 FOR EACH ROW
 EXECUTE FUNCTION log_task_activity();
 
+DROP TRIGGER IF EXISTS task_share_update_trigger ON task_shares;
 CREATE TRIGGER task_share_update_trigger
 AFTER UPDATE ON task_shares
 FOR EACH ROW
 EXECUTE FUNCTION log_task_activity();
 
+DROP TRIGGER IF EXISTS task_share_delete_trigger ON task_shares;
 CREATE TRIGGER task_share_delete_trigger
 AFTER DELETE ON task_shares
 FOR EACH ROW
@@ -329,20 +336,24 @@ EXECUTE FUNCTION log_task_activity();
 -- =============================================
 
 -- Policies for profiles
+DROP POLICY IF EXISTS "Users can view their own profile" ON profiles;
 CREATE POLICY "Users can view their own profile"
   ON profiles FOR SELECT
   USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
 CREATE POLICY "Users can update their own profile"
   ON profiles FOR UPDATE
   USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can insert their own profile" ON profiles;
 CREATE POLICY "Users can insert their own profile"
   ON profiles FOR INSERT
   WITH CHECK (auth.uid() = id);
 
 -- Policies for tasks (with sharing support)
 DROP POLICY IF EXISTS "Users can view their own tasks" ON tasks;
+DROP POLICY IF EXISTS "Users can view their own and shared tasks" ON tasks;
 CREATE POLICY "Users can view their own and shared tasks"
   ON tasks FOR SELECT
   USING (
@@ -355,11 +366,13 @@ CREATE POLICY "Users can view their own and shared tasks"
     )
   );
 
+DROP POLICY IF EXISTS "Users can insert their own tasks" ON tasks;
 CREATE POLICY "Users can insert their own tasks"
   ON tasks FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can update their own tasks" ON tasks;
+DROP POLICY IF EXISTS "Users can update their own and shared tasks with edit permission" ON tasks;
 CREATE POLICY "Users can update their own and shared tasks with edit permission"
   ON tasks FOR UPDATE
   USING (
@@ -373,111 +386,137 @@ CREATE POLICY "Users can update their own and shared tasks with edit permission"
     )
   );
 
+DROP POLICY IF EXISTS "Users can delete their own tasks" ON tasks;
 CREATE POLICY "Users can delete their own tasks"
   ON tasks FOR DELETE
   USING (auth.uid() = user_id);
 
 -- Policies for moods
+DROP POLICY IF EXISTS "Users can view their own moods" ON moods;
 CREATE POLICY "Users can view their own moods"
   ON moods FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own moods" ON moods;
 CREATE POLICY "Users can insert their own moods"
   ON moods FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own moods" ON moods;
 CREATE POLICY "Users can update their own moods"
   ON moods FOR UPDATE
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own moods" ON moods;
 CREATE POLICY "Users can delete their own moods"
   ON moods FOR DELETE
   USING (auth.uid() = user_id);
 
 -- Policies for recommendations
+DROP POLICY IF EXISTS "Users can view their own recommendations" ON recommendations;
 CREATE POLICY "Users can view their own recommendations"
   ON recommendations FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own recommendations" ON recommendations;
 CREATE POLICY "Users can insert their own recommendations"
   ON recommendations FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own recommendations" ON recommendations;
 CREATE POLICY "Users can update their own recommendations"
   ON recommendations FOR UPDATE
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own recommendations" ON recommendations;
 CREATE POLICY "Users can delete their own recommendations"
   ON recommendations FOR DELETE
   USING (auth.uid() = user_id);
 
 -- Policies for analytics tables
+DROP POLICY IF EXISTS "Users can view their own analytics_daily" ON analytics_daily;
 CREATE POLICY "Users can view their own analytics_daily"
 ON analytics_daily FOR SELECT
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own analytics_daily" ON analytics_daily;
 CREATE POLICY "Users can insert their own analytics_daily"
 ON analytics_daily FOR INSERT
 WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own analytics_daily" ON analytics_daily;
 CREATE POLICY "Users can update their own analytics_daily"
 ON analytics_daily FOR UPDATE
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can view their own analytics_mood" ON analytics_mood;
 CREATE POLICY "Users can view their own analytics_mood"
 ON analytics_mood FOR SELECT
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own analytics_mood" ON analytics_mood;
 CREATE POLICY "Users can insert their own analytics_mood"
 ON analytics_mood FOR INSERT
 WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own analytics_mood" ON analytics_mood;
 CREATE POLICY "Users can update their own analytics_mood"
 ON analytics_mood FOR UPDATE
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can view their own analytics_category" ON analytics_category;
 CREATE POLICY "Users can view their own analytics_category"
 ON analytics_category FOR SELECT
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own analytics_category" ON analytics_category;
 CREATE POLICY "Users can insert their own analytics_category"
 ON analytics_category FOR INSERT
 WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own analytics_category" ON analytics_category;
 CREATE POLICY "Users can update their own analytics_category"
 ON analytics_category FOR UPDATE
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can view their own analytics_weekly" ON analytics_weekly;
 CREATE POLICY "Users can view their own analytics_weekly"
 ON analytics_weekly FOR SELECT
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own analytics_weekly" ON analytics_weekly;
 CREATE POLICY "Users can insert their own analytics_weekly"
 ON analytics_weekly FOR INSERT
 WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own analytics_weekly" ON analytics_weekly;
 CREATE POLICY "Users can update their own analytics_weekly"
 ON analytics_weekly FOR UPDATE
 USING (auth.uid() = user_id);
 
 -- Policies for task sharing
+DROP POLICY IF EXISTS "Users can view tasks shared with them" ON task_shares;
 CREATE POLICY "Users can view tasks shared with them"
 ON task_shares FOR SELECT
 USING (auth.uid() = shared_with_id OR auth.uid() = owner_id);
 
+DROP POLICY IF EXISTS "Users can share their own tasks" ON task_shares;
 CREATE POLICY "Users can share their own tasks"
 ON task_shares FOR INSERT
 WITH CHECK (auth.uid() = owner_id);
 
+DROP POLICY IF EXISTS "Users can update their own shares" ON task_shares;
 CREATE POLICY "Users can update their own shares"
 ON task_shares FOR UPDATE
 USING (auth.uid() = owner_id);
 
+DROP POLICY IF EXISTS "Users can delete their own shares" ON task_shares;
 CREATE POLICY "Users can delete their own shares"
 ON task_shares FOR DELETE
 USING (auth.uid() = owner_id);
 
 -- Policies for task share activities
+DROP POLICY IF EXISTS "Users can view activities for tasks shared with them" ON task_share_activities;
 CREATE POLICY "Users can view activities for tasks shared with them"
 ON task_share_activities FOR SELECT
 USING (
@@ -489,6 +528,7 @@ USING (
   )
 );
 
+DROP POLICY IF EXISTS "Users can add activities for tasks they have access to" ON task_share_activities;
 CREATE POLICY "Users can add activities for tasks they have access to"
 ON task_share_activities FOR INSERT
 WITH CHECK (
@@ -506,3 +546,7 @@ WITH CHECK (
     )
   )
 );
+
+-- Grant permissions for the views
+GRANT SELECT ON task_shares_with_profiles TO authenticated;
+GRANT SELECT ON task_share_activities_with_profiles TO authenticated;
