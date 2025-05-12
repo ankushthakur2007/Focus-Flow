@@ -8,4 +8,34 @@ export interface Task {
   status: 'pending' | 'in_progress' | 'completed';
   created_at: string;
   updated_at?: string;
+  is_shared?: boolean;
+  shared_by?: string;
+}
+
+export interface TaskShare {
+  id: string;
+  task_id: string;
+  owner_id: string;
+  shared_with_id: string;
+  permission_level: 'view' | 'edit' | 'admin';
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface TaskShareActivity {
+  id: string;
+  task_id: string;
+  user_id: string;
+  activity_type: 'create' | 'update' | 'delete' | 'share' | 'unshare' | 'status_change' | 'comment';
+  activity_data?: any;
+  created_at: string;
+}
+
+export interface SharedUser {
+  id: string;
+  email: string;
+  name?: string;
+  permission_level: 'view' | 'edit' | 'admin';
+  status: 'pending' | 'accepted' | 'rejected';
 }

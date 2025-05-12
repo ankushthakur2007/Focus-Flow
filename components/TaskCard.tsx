@@ -4,16 +4,20 @@ import { format, parseISO } from 'date-fns';
 import TaskRecommendation from './TaskRecommendation';
 import AuthContext from './AuthContext';
 import TouchFriendlyButton from './TouchFriendlyButton';
+import TaskShareModal from './TaskShareModal';
 
 interface TaskCardProps {
   task: Task;
   onStatusChange: (taskId: string, newStatus: string) => void;
   onDelete: (taskId: string) => void;
+  isShared?: boolean;
+  sharedBy?: string;
 }
 
-const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
+const TaskCard = ({ task, onStatusChange, onDelete, isShared = false, sharedBy }: TaskCardProps) => {
   // Each card has its own expanded state
   const [expanded, setExpanded] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const { user } = useContext(AuthContext);
 
   const getPriorityColor = (priority: string) => {
@@ -73,7 +77,7 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 ${isShared ? 'border-l-4 border-blue-500' : ''}`}>
 
       {/* Card Header */}
       <div className="p-4 flex flex-col sm:flex-row justify-between items-start gap-3">
@@ -91,7 +95,20 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
               <span className={`text-sm sm:text-xs font-medium ${getPriorityTextColor(task.priority)}`}>
                 {task.priority.toUpperCase()}
               </span>
+              {isShared && (
+                <span className="text-sm sm:text-xs text-blue-500 dark:text-blue-400 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+                  </svg>
+                  Shared
+                </span>
+              )}
             </div>
+            {isShared && sharedBy && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Shared by: {sharedBy}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center justify-between w-full sm:w-auto sm:justify-end space-x-2 mt-2 sm:mt-0">
@@ -181,6 +198,25 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
               <span className="inline">Chat</span>
             </TouchFriendlyButton>
 
+            {!isShared && (
+              <TouchFriendlyButton
+                onClick={() => setShowShareModal(true)}
+                className="text-blue-500 hover:text-blue-700 dark:hover:text-blue-400 flex items-center px-4 py-2 sm:px-3 sm:py-1 rounded-md hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors"
+                ariaLabel="Share this task"
+                title="Share this task"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6 sm:h-5 sm:w-5 mr-2 sm:mr-1"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+                </svg>
+                <span className="inline">Share</span>
+              </TouchFriendlyButton>
+            )}
+
             <TouchFriendlyButton
               onClick={() => onDelete(task.id)}
               className="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-2 rounded-md hover:bg-red-50 dark:hover:bg-gray-700 transition-colors"
@@ -204,6 +240,15 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
         </div>
       </div>
     </div>
+
+    {/* Task Share Modal */}
+    {showShareModal && (
+      <TaskShareModal
+        task={task}
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+      />
+    )}
   );
 };
 

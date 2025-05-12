@@ -114,6 +114,10 @@ const KeyboardShortcutsHelp: React.FC = () => {
                   <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm">G + A</kbd>
                 </li>
                 <li className="flex justify-between">
+                  <span>Go to Shared</span>
+                  <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm">G + S</kbd>
+                </li>
+                <li className="flex justify-between">
                   <span>Go to Profile</span>
                   <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm">G + U</kbd>
                 </li>
