@@ -444,8 +444,7 @@ export const getTasksSharedWithMe = async (): Promise<Task[]> => {
         task_description,
         task_status,
         task_priority,
-        task_category,
-        task_due_date
+        task_category
       `)
       .eq('shared_with_id', user.id)
       .eq('status', 'accepted');
@@ -525,7 +524,7 @@ export const getTasksSharedWithMe = async (): Promise<Task[]> => {
         status: share.task_status || 'todo',
         priority: share.task_priority || 'medium',
         category: share.task_category || '',
-        due_date: share.task_due_date || null,
+        due_date: null,
         user_id: share.owner_id,
         created_at: share.created_at,
         updated_at: share.updated_at,

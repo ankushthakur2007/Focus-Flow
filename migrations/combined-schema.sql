@@ -161,8 +161,7 @@ SELECT
   t.description AS task_description,
   t.status AS task_status,
   t.priority AS task_priority,
-  t.category AS task_category,
-  t.due_date AS task_due_date
+  t.category AS task_category
 FROM
   task_shares ts
 LEFT JOIN
