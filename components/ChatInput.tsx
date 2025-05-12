@@ -41,7 +41,7 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="border-t border-gray-200 dark:border-gray-700 p-4">
+    <form onSubmit={handleSubmit} className="border-t border-gray-200 dark:border-gray-700 p-2 sm:p-4 bg-white dark:bg-gray-800 sticky bottom-0">
       <div className="flex items-end">
         <div className="flex-grow relative">
           <textarea
@@ -52,7 +52,8 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
             placeholder="Type your message..."
             disabled={disabled}
             rows={1}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white resize-none overflow-hidden"
+            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white resize-none overflow-hidden shadow-sm"
+            aria-label="Message input"
           />
           {disabled && (
             <div className="absolute right-3 bottom-3 animate-pulse">
@@ -67,7 +68,7 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
         <button
           type="submit"
           disabled={!message.trim() || disabled}
-          className={`px-4 py-3 rounded-r-md h-full flex items-center justify-center ${
+          className={`px-3 sm:px-4 py-2 sm:py-3 rounded-r-md h-full flex items-center justify-center ${
             !message.trim() || disabled
               ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed'
               : 'bg-primary-500 hover:bg-primary-600 text-white'
@@ -86,7 +87,7 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
           </svg>
         </button>
       </div>
-      <div className="text-xs text-gray-500 mt-1 pl-2">
+      <div className="text-xs text-gray-500 mt-1 pl-2 hidden sm:block">
         Press Enter to send, Shift+Enter for new line
       </div>
     </form>

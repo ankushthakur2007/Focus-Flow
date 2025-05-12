@@ -47,13 +47,13 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
         </div>
       )}
 
-      <div className={`max-w-[75%] rounded-lg px-4 py-3 shadow-sm ${
+      <div className={`max-w-[85%] sm:max-w-[75%] rounded-lg px-3 sm:px-4 py-2 sm:py-3 shadow-sm ${
         isUser
           ? 'bg-primary-500 text-white rounded-br-none'
           : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-none'
       }`}>
         <div
-          className="text-sm whitespace-pre-wrap"
+          className="text-sm whitespace-pre-wrap break-words"
           dangerouslySetInnerHTML={{ __html: formatMessageText(message.message) }}
         />
         <div className={`text-xs mt-1 ${

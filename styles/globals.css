@@ -18,6 +18,13 @@
   height: calc(100vh - 8rem);
 }
 
+@media (max-width: 640px) {
+  .chat-container {
+    height: 100vh;
+    border-radius: 0;
+  }
+}
+
 .chat-messages {
   flex-grow: 1;
   overflow-y: auto;
@@ -27,6 +34,17 @@
 .chat-input {
   border-top: 1px solid #e5e7eb;
   padding: 1rem;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 640px) {
+  .btn {
+    @apply py-2 px-3 text-sm;
+  }
+
+  .card {
+    @apply rounded-lg shadow p-4;
+  }
 }
 
 /* Improve textarea appearance */

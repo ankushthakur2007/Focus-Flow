@@ -174,11 +174,11 @@ const ChatPage = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-4 max-w-4xl">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden flex flex-col chat-container">
+    <div className="container mx-auto px-0 sm:px-4 py-0 sm:py-4 max-w-4xl h-[100vh] sm:h-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-none sm:rounded-lg shadow-md overflow-hidden flex flex-col chat-container h-full">
         {/* Chat Header */}
-        <div className="bg-primary-500 text-white p-4 flex items-center sticky top-0 z-10">
-          <Link href="/tasks" className="mr-3 hover:bg-primary-600 p-2 rounded-full transition-colors">
+        <div className="bg-primary-500 text-white p-4 flex items-center sticky top-0 z-10 shadow-sm">
+          <Link href="/tasks" className="mr-3 hover:bg-primary-600 p-2 rounded-full transition-colors" aria-label="Back to tasks">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-6 w-6"
@@ -189,9 +189,9 @@ const ChatPage = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </Link>
-          <div className="flex-grow">
-            <h1 className="text-xl font-bold">{task.title}</h1>
-            <div className="flex items-center text-sm text-primary-100">
+          <div className="flex-grow overflow-hidden">
+            <h1 className="text-xl font-bold truncate">{task.title}</h1>
+            <div className="flex items-center text-sm text-primary-100 flex-wrap">
               <span className="mr-2">{task.category.charAt(0).toUpperCase() + task.category.slice(1)}</span>
               <span className="w-1.5 h-1.5 rounded-full bg-primary-200"></span>
               <span className="ml-2">{task.priority.toUpperCase()}</span>

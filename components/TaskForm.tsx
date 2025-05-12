@@ -23,7 +23,7 @@ const TaskForm = ({ onSubmit, onCancel }: TaskFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="card">
+    <form onSubmit={handleSubmit} className="card max-w-lg mx-auto w-full">
       <h2 className="text-lg font-bold mb-4">Add New Task</h2>
 
       <div className="mb-4">
@@ -38,6 +38,7 @@ const TaskForm = ({ onSubmit, onCancel }: TaskFormProps) => {
           className="input"
           placeholder="Enter task title"
           required
+          autoComplete="off"
         />
       </div>
 
@@ -54,7 +55,7 @@ const TaskForm = ({ onSubmit, onCancel }: TaskFormProps) => {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <div>
           <label htmlFor="priority" className="block text-sm font-medium mb-1">
             Priority
@@ -91,11 +92,11 @@ const TaskForm = ({ onSubmit, onCancel }: TaskFormProps) => {
         </div>
       </div>
 
-      <div className="flex justify-end space-x-2">
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:space-x-2">
         <button
           type="button"
           onClick={onCancel}
-          className="btn btn-secondary"
+          className="btn btn-secondary mt-2 sm:mt-0"
         >
           Cancel
         </button>

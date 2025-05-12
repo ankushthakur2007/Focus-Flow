@@ -175,14 +175,19 @@ const TasksPage = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className="container mx-auto px-4 py-8 pb-20">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Tasks</h1>
         <button
-          className="btn btn-primary"
+          className="btn btn-primary w-full sm:w-auto"
           onClick={() => setShowForm(!showForm)}
         >
-          {showForm ? 'Cancel' : 'Add Task'}
+          <span className="flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            {showForm ? 'Cancel' : 'Add Task'}
+          </span>
         </button>
       </div>
 
@@ -192,11 +197,11 @@ const TasksPage = () => {
         </div>
       )}
 
-      <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
+      <div className="flex flex-wrap gap-2 mb-6 overflow-x-auto pb-2">
         <button
           className={`btn ${
             filter === 'all' ? 'btn-primary' : 'btn-secondary'
-          }`}
+          } flex-1 min-w-[80px] sm:flex-none`}
           onClick={() => setFilter('all')}
         >
           All
@@ -204,7 +209,7 @@ const TasksPage = () => {
         <button
           className={`btn ${
             filter === 'pending' ? 'btn-primary' : 'btn-secondary'
-          }`}
+          } flex-1 min-w-[80px] sm:flex-none`}
           onClick={() => setFilter('pending')}
         >
           Pending
@@ -212,7 +217,7 @@ const TasksPage = () => {
         <button
           className={`btn ${
             filter === 'in_progress' ? 'btn-primary' : 'btn-secondary'
-          }`}
+          } flex-1 min-w-[80px] sm:flex-none`}
           onClick={() => setFilter('in_progress')}
         >
           In Progress
@@ -220,7 +225,7 @@ const TasksPage = () => {
         <button
           className={`btn ${
             filter === 'completed' ? 'btn-primary' : 'btn-secondary'
-          }`}
+          } flex-1 min-w-[80px] sm:flex-none`}
           onClick={() => setFilter('completed')}
         >
           Completed
@@ -232,8 +237,17 @@ const TasksPage = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
         </div>
       ) : tasks.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-gray-500 dark:text-gray-400">No tasks found</p>
+        <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          <p className="text-gray-500 dark:text-gray-400 mb-4">No tasks found</p>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowForm(true)}
+          >
+            Create your first task
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -247,6 +261,19 @@ const TasksPage = () => {
           ))}
         </div>
       )}
+
+      {/* Fixed Add Button for Mobile */}
+      <div className="fixed bottom-6 right-6 md:hidden z-10">
+        <button
+          className="btn btn-primary rounded-full w-14 h-14 shadow-lg flex items-center justify-center"
+          onClick={() => setShowForm(true)}
+          aria-label="Add Task"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 };

@@ -24,7 +24,7 @@ const RecommendationCard = ({ recommendation, onRefresh, loading }: Recommendati
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
       {/* Header */}
       <div className="bg-primary-600 dark:bg-primary-800 p-4 text-white">
         <div className="flex justify-between items-center">
@@ -34,6 +34,7 @@ const RecommendationCard = ({ recommendation, onRefresh, loading }: Recommendati
             disabled={loading}
             className="p-2 rounded-full hover:bg-primary-500 dark:hover:bg-primary-700 transition-colors"
             title="Generate new recommendation"
+            aria-label="Refresh recommendation"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -51,7 +52,7 @@ const RecommendationCard = ({ recommendation, onRefresh, loading }: Recommendati
             </svg>
           </button>
         </div>
-        <p className="text-lg mt-2 font-medium">
+        <p className="text-lg mt-2 font-medium break-words">
           {recommendation.recommended_task}
         </p>
       </div>
@@ -143,16 +144,17 @@ const RecommendationCard = ({ recommendation, onRefresh, loading }: Recommendati
 
         {/* Footer */}
         <div className="p-4 text-xs text-gray-500 dark:text-gray-400">
-          <div className="flex flex-wrap justify-between items-center gap-2">
-            <div className="flex items-center">
-              <div className="mr-2">
-                Based on mood: <span className="font-medium">{recommendation.mood || 'neutral'}</span>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full">
+              <div className="flex items-center">
+                <span className="mr-1">🎭</span>
+                <span>Mood: <span className="font-medium">{recommendation.mood || 'neutral'}</span></span>
               </div>
 
               {recommendation.task_id && (
                 <a
                   href={`/chat/${recommendation.task_id}`}
-                  className="text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 flex items-center ml-2"
+                  className="text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 flex items-center px-2 py-1 rounded-md hover:bg-primary-50 dark:hover:bg-gray-700 transition-colors"
                   title="Chat about this task"
                 >
                   <svg
@@ -167,14 +169,19 @@ const RecommendationCard = ({ recommendation, onRefresh, loading }: Recommendati
                       clipRule="evenodd"
                     />
                   </svg>
-                  <span>Chat</span>
+                  <span>Chat about this task</span>
                 </a>
               )}
             </div>
 
             {recommendation.created_at && (
-              <div className="text-right whitespace-nowrap">
-                Generated: {format(parseISO(recommendation.created_at), 'MMM d, h:mm a')}
+              <div className="text-left sm:text-right whitespace-nowrap mt-2 sm:mt-0">
+                <span className="flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Generated: {format(parseISO(recommendation.created_at), 'MMM d, h:mm a')}
+                </span>
               </div>
             )}
           </div>

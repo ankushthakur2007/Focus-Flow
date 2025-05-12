@@ -274,20 +274,25 @@ const PersonalizedPage = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className="container mx-auto px-4 py-8 pb-20">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Personalized Recommendations</h1>
         <button
-          className="btn btn-primary"
+          className="btn btn-primary w-full sm:w-auto"
           onClick={() => fetchRecommendations(true)}
           disabled={loading}
         >
-          {loading ? 'Loading...' : 'Refresh All'}
+          <span className="flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+            </svg>
+            {loading ? 'Loading...' : 'Refresh All'}
+          </span>
         </button>
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-12">
+        <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-md">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500 mb-4"></div>
           <p className="text-gray-500 dark:text-gray-400">Analyzing your tasks and mood...</p>
         </div>
@@ -320,6 +325,9 @@ const PersonalizedPage = () => {
         </div>
       ) : (
         <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+          </svg>
           <p className="text-gray-500 dark:text-gray-400 mb-4">
             No recommendations available
           </p>
@@ -328,6 +336,22 @@ const PersonalizedPage = () => {
             onClick={() => fetchRecommendations(true)}
           >
             Generate Recommendations
+          </button>
+        </div>
+      )}
+
+      {/* Fixed Refresh Button for Mobile */}
+      {recommendations.length > 0 && (
+        <div className="fixed bottom-6 right-6 md:hidden z-10">
+          <button
+            className="btn btn-primary rounded-full w-14 h-14 shadow-lg flex items-center justify-center"
+            onClick={() => fetchRecommendations(true)}
+            disabled={loading}
+            aria-label="Refresh Recommendations"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+            </svg>
           </button>
         </div>
       )}
