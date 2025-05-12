@@ -3,6 +3,7 @@ import { Task } from '../types/task';
 import { format, parseISO } from 'date-fns';
 import TaskRecommendation from './TaskRecommendation';
 import AuthContext from './AuthContext';
+import TouchFriendlyButton from './TouchFriendlyButton';
 
 interface TaskCardProps {
   task: Task;
@@ -77,41 +78,41 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
       {/* Card Header */}
       <div className="p-4 flex flex-col sm:flex-row justify-between items-start gap-3">
         <div className="flex items-start space-x-3 w-full">
-          <div className={`w-3 h-3 rounded-full mt-1.5 ${getPriorityColor(task.priority)}`}></div>
+          <div className={`w-4 h-4 sm:w-3 sm:h-3 rounded-full mt-1.5 ${getPriorityColor(task.priority)}`}></div>
           <div className="flex-grow">
-            <h3 className={`font-medium break-words ${task.status === 'completed' ? 'line-through text-gray-500 dark:text-gray-400' : ''}`}>
+            <h3 className={`font-medium break-words text-base ${task.status === 'completed' ? 'line-through text-gray-500 dark:text-gray-400' : ''}`}>
               {task.title}
             </h3>
             <div className="flex flex-wrap items-center gap-2 mt-1">
               <div className="flex items-center">
-                <span className="mr-1 text-xs">{getCategoryIcon(task.category)}</span>
-                <span className="text-xs text-gray-600 dark:text-gray-400">{task.category.charAt(0).toUpperCase() + task.category.slice(1)}</span>
+                <span className="mr-1 text-sm sm:text-xs">{getCategoryIcon(task.category)}</span>
+                <span className="text-sm sm:text-xs text-gray-600 dark:text-gray-400">{task.category.charAt(0).toUpperCase() + task.category.slice(1)}</span>
               </div>
-              <span className={`text-xs font-medium ${getPriorityTextColor(task.priority)}`}>
+              <span className={`text-sm sm:text-xs font-medium ${getPriorityTextColor(task.priority)}`}>
                 {task.priority.toUpperCase()}
               </span>
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-between w-full sm:w-auto sm:justify-end space-x-2">
-          <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${getStatusBadgeColor(task.status)}`}>
+        <div className="flex items-center justify-between w-full sm:w-auto sm:justify-end space-x-2 mt-2 sm:mt-0">
+          <span className={`text-sm sm:text-xs px-3 py-1.5 sm:px-2 sm:py-1 rounded-full whitespace-nowrap ${getStatusBadgeColor(task.status)}`}>
             {task.status.replace('_', ' ').charAt(0).toUpperCase() + task.status.replace('_', ' ').slice(1)}
           </span>
-          <button
+          <TouchFriendlyButton
             onClick={() => setExpanded(!expanded)}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-            aria-label={expanded ? "Collapse task details" : "Expand task details"}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+            ariaLabel={expanded ? "Collapse task details" : "Expand task details"}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className={`h-5 w-5 transition-transform ${expanded ? 'rotate-180' : ''}`}
+              className={`h-6 w-6 sm:h-5 sm:w-5 transition-transform ${expanded ? 'rotate-180' : ''}`}
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
-          </button>
+          </TouchFriendlyButton>
         </div>
       </div>
 
@@ -144,12 +145,12 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
         </div>
 
         {/* Actions */}
-        <div className="px-4 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div className="px-4 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center w-full sm:w-auto">
             <select
               value={task.status}
               onChange={(e) => onStatusChange(task.id, e.target.value)}
-              className="text-sm border border-gray-300 rounded-md px-2 py-1 dark:bg-gray-700 dark:border-gray-600 w-full sm:w-auto"
+              className="text-base sm:text-sm border border-gray-300 rounded-md px-3 py-2 sm:px-2 sm:py-1 dark:bg-gray-700 dark:border-gray-600 w-full sm:w-auto"
               aria-label="Change task status"
             >
               <option value="pending">Pending</option>
@@ -158,15 +159,16 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
             </select>
           </div>
 
-          <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
-            <a
-              href={`/chat/${task.id}`}
-              className="text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 flex items-center px-3 py-1 rounded-md hover:bg-primary-50 dark:hover:bg-gray-700 transition-colors"
+          <div className="flex items-center space-x-4 w-full sm:w-auto justify-between sm:justify-end mt-3 sm:mt-0">
+            <TouchFriendlyButton
+              onClick={() => window.location.href = `/chat/${task.id}`}
+              className="text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 flex items-center px-4 py-2 sm:px-3 sm:py-1 rounded-md hover:bg-primary-50 dark:hover:bg-gray-700 transition-colors"
+              ariaLabel="Chat about this task"
               title="Chat about this task"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 mr-1"
+                className="h-6 w-6 sm:h-5 sm:w-5 mr-2 sm:mr-1"
                 viewBox="0 0 20 20"
                 fill="currentColor"
               >
@@ -176,20 +178,18 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
                   clipRule="evenodd"
                 />
               </svg>
-              <span className="hidden sm:inline">Chat</span>
-            </a>
+              <span className="inline">Chat</span>
+            </TouchFriendlyButton>
 
-
-
-            <button
+            <TouchFriendlyButton
               onClick={() => onDelete(task.id)}
               className="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-2 rounded-md hover:bg-red-50 dark:hover:bg-gray-700 transition-colors"
               title="Delete task"
-              aria-label="Delete task"
+              ariaLabel="Delete task"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
+                className="h-6 w-6 sm:h-5 sm:w-5"
                 viewBox="0 0 20 20"
                 fill="currentColor"
               >
@@ -199,7 +199,7 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
                   clipRule="evenodd"
                 />
               </svg>
-            </button>
+            </TouchFriendlyButton>
           </div>
         </div>
       </div>

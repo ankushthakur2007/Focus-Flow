@@ -1,6 +1,7 @@
 import { Recommendation } from '../types/recommendation';
 import { format, parseISO } from 'date-fns';
 import { useState } from 'react';
+import TouchFriendlyButton from './TouchFriendlyButton';
 
 interface RecommendationCardProps {
   recommendation: Recommendation;
@@ -31,16 +32,16 @@ const RecommendationCard = ({ recommendation, onRefresh, loading }: Recommendati
       <div className="bg-primary-600 dark:bg-primary-800 p-4 text-white">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold">Recommended Task</h2>
-          <button
+          <TouchFriendlyButton
             onClick={onRefresh}
             disabled={loading}
             className="p-2 rounded-full hover:bg-primary-500 dark:hover:bg-primary-700 transition-colors"
             title="Generate new recommendation"
-            aria-label="Refresh recommendation"
+            ariaLabel="Refresh recommendation"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`}
+              className={`h-6 w-6 sm:h-5 sm:w-5 ${loading ? 'animate-spin' : ''}`}
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -52,7 +53,7 @@ const RecommendationCard = ({ recommendation, onRefresh, loading }: Recommendati
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-          </button>
+          </TouchFriendlyButton>
         </div>
         <p className="text-lg mt-2 font-medium break-words">
           {recommendation.recommended_task}
@@ -67,11 +68,11 @@ const RecommendationCard = ({ recommendation, onRefresh, loading }: Recommendati
             className="p-4 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-750"
             onClick={() => toggleSection('why')}
           >
-            <h3 className="text-md font-semibold text-gray-700 dark:text-gray-300">
+            <h3 className="text-base sm:text-md font-semibold text-gray-700 dark:text-gray-300">
               Why This Task?
             </h3>
             <svg
-              className={`w-5 h-5 text-gray-500 transition-transform ${expandedSections.why ? 'transform rotate-180' : ''}`}
+              className={`w-6 h-6 sm:w-5 sm:h-5 text-gray-500 transition-transform ${expandedSections.why ? 'transform rotate-180' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -82,7 +83,7 @@ const RecommendationCard = ({ recommendation, onRefresh, loading }: Recommendati
           </div>
 
           <div className={`px-4 pb-4 ${expandedSections.why ? 'block' : 'hidden'}`}>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600 dark:text-gray-400 text-base sm:text-sm">
               {recommendation.reasoning}
             </p>
           </div>
@@ -234,14 +235,15 @@ const RecommendationCard = ({ recommendation, onRefresh, loading }: Recommendati
               </div>
 
               {recommendation.task_id && (
-                <a
-                  href={`/chat/${recommendation.task_id}`}
-                  className="text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 flex items-center px-2 py-1 rounded-md hover:bg-primary-50 dark:hover:bg-gray-700 transition-colors"
+                <TouchFriendlyButton
+                  onClick={() => window.location.href = `/chat/${recommendation.task_id}`}
+                  className="text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 flex items-center px-3 py-2 sm:px-2 sm:py-1 rounded-md hover:bg-primary-50 dark:hover:bg-gray-700 transition-colors"
                   title="Chat about this task"
+                  ariaLabel="Chat about this task"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4 mr-1"
+                    className="h-5 w-5 sm:h-4 sm:w-4 mr-2 sm:mr-1"
                     viewBox="0 0 20 20"
                     fill="currentColor"
                   >
@@ -252,7 +254,7 @@ const RecommendationCard = ({ recommendation, onRefresh, loading }: Recommendati
                     />
                   </svg>
                   <span>Chat about this task</span>
-                </a>
+                </TouchFriendlyButton>
               )}
             </div>
 
