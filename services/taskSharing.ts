@@ -65,8 +65,11 @@ export const shareTask = async (
  */
 export const getTaskShares = async (taskId: string): Promise<SharedUser[]> => {
   try {
+    console.log('Getting task shares for task ID:', taskId);
+
+    // Use the task_shares_with_profiles view instead of trying to join directly
     const { data: shares, error } = await supabase
-      .from('task_shares')
+      .from('task_shares_with_profiles')
       .select(`
         id,
         task_id,
@@ -76,20 +79,23 @@ export const getTaskShares = async (taskId: string): Promise<SharedUser[]> => {
         status,
         created_at,
         updated_at,
-        profiles:shared_with_id (id, email, name)
+        shared_with_email,
+        shared_with_name
       `)
       .eq('task_id', taskId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error in getTaskShares query:', error);
+      throw error;
+    }
+
+    console.log('Found task shares:', shares?.length || 0);
 
     // Transform the data to match the SharedUser interface
     return (shares || []).map((share) => {
-      // Use a type assertion to help TypeScript understand the structure
-      const profileData = share.profiles as { email?: string; name?: string } | null | undefined;
-
-      // Get email and name safely
-      const email = profileData && typeof profileData.email === 'string' ? profileData.email : '';
-      const name = profileData && typeof profileData.name === 'string' ? profileData.name : undefined;
+      // Get email and name directly from the view
+      const email = share.shared_with_email || '';
+      const name = share.shared_with_name || undefined;
 
       return {
         id: share.shared_with_id,

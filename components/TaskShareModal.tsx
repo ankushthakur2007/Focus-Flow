@@ -24,16 +24,23 @@ const TaskShareModal: React.FC<TaskShareModalProps> = ({ task, isOpen, onClose }
 
   const loadSharedUsers = async () => {
     if (!task) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
+      console.log('Loading shared users for task:', task.id);
       const users = await getTaskShares(task.id);
+      console.log('Successfully loaded shared users:', users.length);
       setSharedUsers(users);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error loading shared users:', err);
-      setError('Failed to load shared users');
+      // Provide a more detailed error message
+      if (err.message) {
+        setError(`Failed to load shared users: ${err.message}`);
+      } else {
+        setError('Failed to load shared users. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
@@ -42,11 +49,11 @@ const TaskShareModal: React.FC<TaskShareModalProps> = ({ task, isOpen, onClose }
   const handleShareTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!task) return;
-    
+
     setLoading(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       await shareTask(task.id, email, permissionLevel);
       setSuccess(`Task shared with ${email}`);
@@ -62,10 +69,10 @@ const TaskShareModal: React.FC<TaskShareModalProps> = ({ task, isOpen, onClose }
 
   const handleUpdatePermission = async (userId: string, newPermission: 'view' | 'edit' | 'admin') => {
     if (!task) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       await updateTaskSharePermission(task.id, userId, newPermission);
       loadSharedUsers();
@@ -79,10 +86,10 @@ const TaskShareModal: React.FC<TaskShareModalProps> = ({ task, isOpen, onClose }
 
   const handleRemoveAccess = async (userId: string) => {
     if (!task) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       await removeTaskShare(task.id, userId);
       loadSharedUsers();
@@ -122,24 +129,24 @@ const TaskShareModal: React.FC<TaskShareModalProps> = ({ task, isOpen, onClose }
             </svg>
           </button>
         </div>
-        
+
         <div className="mb-6">
           <h3 className="font-medium text-lg mb-2">Task: {task.title}</h3>
           <p className="text-gray-600 dark:text-gray-400 text-sm">{task.description}</p>
         </div>
-        
+
         {error && (
           <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 p-3 rounded-md mb-4">
             {error}
           </div>
         )}
-        
+
         {success && (
           <div className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 p-3 rounded-md mb-4">
             {success}
           </div>
         )}
-        
+
         <form onSubmit={handleShareTask} className="mb-6">
           <div className="mb-4">
             <label htmlFor="email" className="block text-sm font-medium mb-1">
@@ -155,7 +162,7 @@ const TaskShareModal: React.FC<TaskShareModalProps> = ({ task, isOpen, onClose }
               required
             />
           </div>
-          
+
           <div className="mb-4">
             <label htmlFor="permission" className="block text-sm font-medium mb-1">
               Permission Level
@@ -171,7 +178,7 @@ const TaskShareModal: React.FC<TaskShareModalProps> = ({ task, isOpen, onClose }
               <option value="admin">Admin</option>
             </select>
           </div>
-          
+
           <button
             type="submit"
             disabled={loading}
@@ -180,15 +187,15 @@ const TaskShareModal: React.FC<TaskShareModalProps> = ({ task, isOpen, onClose }
             {loading ? 'Sharing...' : 'Share Task'}
           </button>
         </form>
-        
+
         <div>
           <h3 className="font-medium text-lg mb-2">Shared With</h3>
           {loading && <p className="text-gray-500 dark:text-gray-400">Loading...</p>}
-          
+
           {!loading && sharedUsers.length === 0 && (
             <p className="text-gray-500 dark:text-gray-400">This task hasn't been shared with anyone yet.</p>
           )}
-          
+
           {!loading && sharedUsers.length > 0 && (
             <ul className="space-y-3">
               {sharedUsers.map((user) => (
@@ -199,8 +206,8 @@ const TaskShareModal: React.FC<TaskShareModalProps> = ({ task, isOpen, onClose }
                       <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
                       <div className="flex items-center mt-1">
                         <span className={`text-xs px-2 py-1 rounded-full ${
-                          user.status === 'accepted' 
-                            ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                          user.status === 'accepted'
+                            ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                             : user.status === 'rejected'
                             ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                             : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
@@ -208,15 +215,15 @@ const TaskShareModal: React.FC<TaskShareModalProps> = ({ task, isOpen, onClose }
                           {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
                         </span>
                         <span className="text-xs ml-2 px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                          {user.permission_level === 'view' 
-                            ? 'View Only' 
+                          {user.permission_level === 'view'
+                            ? 'View Only'
                             : user.permission_level === 'edit'
                             ? 'Can Edit'
                             : 'Admin'}
                         </span>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center">
                       <select
                         value={user.permission_level}
@@ -228,7 +235,7 @@ const TaskShareModal: React.FC<TaskShareModalProps> = ({ task, isOpen, onClose }
                         <option value="edit">Edit</option>
                         <option value="admin">Admin</option>
                       </select>
-                      
+
                       <button
                         onClick={() => handleRemoveAccess(user.id)}
                         className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
