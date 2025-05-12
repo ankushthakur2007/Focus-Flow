@@ -426,17 +426,26 @@ export const getTasksSharedWithMe = async (): Promise<Task[]> => {
     console.log('Authenticated user ID:', user.id);
     console.log('Session expires at:', sessionData.session.expires_at);
 
-    // Get tasks shared with the current user using the view with profile information
+    // Get tasks shared with the current user using the enhanced view with profile and task information
+    console.log('Fetching accepted task shares for user ID:', user.id);
+
     const { data: shares, error: sharesError } = await supabase
       .from('task_shares_with_profiles')
       .select(`
         id,
         task_id,
         owner_id,
+        shared_with_id,
         permission_level,
         status,
         owner_email,
-        owner_name
+        owner_name,
+        task_title,
+        task_description,
+        task_status,
+        task_priority,
+        task_category,
+        task_due_date
       `)
       .eq('shared_with_id', user.id)
       .eq('status', 'accepted');
@@ -448,15 +457,39 @@ export const getTasksSharedWithMe = async (): Promise<Task[]> => {
       throw new Error('Failed to fetch shared tasks: ' + sharesError.message);
     }
 
-    console.log('Shared tasks found:', shares?.length || 0);
+    // Log the actual shares for debugging
+    if (shares && shares.length > 0) {
+      console.log('Shared tasks found:', shares.length);
+      shares.forEach((share, index) => {
+        console.log(`Share ${index + 1}:`, {
+          id: share.id,
+          task_id: share.task_id,
+          status: share.status,
+          owner: share.owner_email || share.owner_id,
+          task_title: share.task_title
+        });
+      });
+    } else {
+      console.log('No shared tasks found with status "accepted"');
 
-    if (!shares || shares.length === 0) {
+      // For debugging, let's check if there are any shares at all for this user
+      const { data: allShares, error: allSharesError } = await supabase
+        .from('task_shares')
+        .select('id, task_id, status')
+        .eq('shared_with_id', user.id);
+
+      if (allSharesError) {
+        console.error('Error fetching all shares:', allSharesError);
+      } else {
+        console.log('All shares for this user:', allShares);
+      }
+
       return [];
     }
 
-    // Get the actual tasks
+    // Get the actual tasks to ensure we have complete task data
     const taskIds = shares.map((share) => share.task_id);
-    console.log('Fetching task details for IDs:', taskIds);
+    console.log('Fetching complete task details for IDs:', taskIds);
 
     const { data: tasks, error: tasksError } = await supabase
       .from('tasks')
@@ -470,7 +503,35 @@ export const getTasksSharedWithMe = async (): Promise<Task[]> => {
 
     if (!tasks || tasks.length === 0) {
       console.log('No task details found for the shared tasks');
-      return [];
+
+      // For debugging, let's check if the tasks exist at all
+      const { data: checkTasks, error: checkError } = await supabase
+        .from('tasks')
+        .select('id, title')
+        .in('id', taskIds);
+
+      if (checkError) {
+        console.error('Error checking tasks existence:', checkError);
+      } else {
+        console.log('Tasks existence check:', checkTasks);
+      }
+
+      // Try to construct tasks from the view data as a fallback
+      console.log('Constructing tasks from view data as fallback');
+      return shares.map(share => ({
+        id: share.task_id,
+        title: share.task_title || 'Untitled Task',
+        description: share.task_description || '',
+        status: share.task_status || 'todo',
+        priority: share.task_priority || 'medium',
+        category: share.task_category || '',
+        due_date: share.task_due_date || null,
+        user_id: share.owner_id,
+        created_at: share.created_at,
+        updated_at: share.updated_at,
+        is_shared: true,
+        shared_by: share.owner_name || share.owner_email || share.owner_id || 'Unknown'
+      }));
     }
 
     console.log('Task details found:', tasks.length);

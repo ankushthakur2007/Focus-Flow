@@ -57,6 +57,22 @@ const SharedTasksSection: React.FC = () => {
         console.log('Fetching shared tasks...');
         tasks = await getTasksSharedWithMe();
         console.log('Loaded shared tasks:', tasks.length);
+
+        // Log the actual tasks for debugging
+        if (tasks.length > 0) {
+          console.log('Shared tasks details:');
+          tasks.forEach((task, index) => {
+            console.log(`Task ${index + 1}:`, {
+              id: task.id,
+              title: task.title,
+              status: task.status,
+              is_shared: task.is_shared,
+              shared_by: task.shared_by
+            });
+          });
+        } else {
+          console.log('No shared tasks were returned from getTasksSharedWithMe');
+        }
       } catch (taskErr: any) {
         console.error('Error loading shared tasks:', taskErr);
         throw new Error(`Failed to load shared tasks: ${taskErr.message || 'Unknown error'}`);
@@ -148,7 +164,11 @@ const SharedTasksSection: React.FC = () => {
       }
 
       // Reload the data
-      loadSharedTasks();
+      await loadSharedTasks();
+
+      // Force a page refresh to ensure everything is updated
+      console.log('Forcing page refresh to ensure UI is updated');
+      window.location.reload();
 
       // Clear the loading state for this specific share
       setRespondingShares(prev => ({ ...prev, [taskShareId]: false }));

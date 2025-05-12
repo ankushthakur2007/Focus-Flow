@@ -156,13 +156,21 @@ SELECT
   owner.email AS owner_email,
   owner.name AS owner_name,
   shared.email AS shared_with_email,
-  shared.name AS shared_with_name
+  shared.name AS shared_with_name,
+  t.title AS task_title,
+  t.description AS task_description,
+  t.status AS task_status,
+  t.priority AS task_priority,
+  t.category AS task_category,
+  t.due_date AS task_due_date
 FROM
   task_shares ts
 LEFT JOIN
   profiles owner ON ts.owner_id = owner.id
 LEFT JOIN
-  profiles shared ON ts.shared_with_id = shared.id;
+  profiles shared ON ts.shared_with_id = shared.id
+LEFT JOIN
+  tasks t ON ts.task_id = t.id;
 
 -- Create index on profiles.email to speed up email lookups
 CREATE INDEX IF NOT EXISTS profiles_email_idx ON profiles(email);
