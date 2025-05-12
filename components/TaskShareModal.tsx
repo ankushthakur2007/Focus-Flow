@@ -55,13 +55,22 @@ const TaskShareModal: React.FC<TaskShareModalProps> = ({ task, isOpen, onClose }
     setSuccess(null);
 
     try {
+      console.log(`Attempting to share task ${task.id} with ${email}`);
       await shareTask(task.id, email, permissionLevel);
       setSuccess(`Task shared with ${email}`);
       setEmail('');
       loadSharedUsers();
     } catch (err: any) {
       console.error('Error sharing task:', err);
-      setError(err.message || 'Failed to share task');
+
+      // Provide more helpful error messages
+      if (err.message && err.message.includes('not found')) {
+        setError(`${err.message} Please check the email address and make sure the user has registered with FocusFlow.`);
+      } else if (err.message && err.message.includes('already shared')) {
+        setError(`This task is already shared with ${email}.`);
+      } else {
+        setError(err.message || 'Failed to share task. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }

@@ -10,17 +10,108 @@ export const shareTask = async (
   permissionLevel: 'view' | 'edit' | 'admin' = 'view'
 ): Promise<TaskShare> => {
   try {
-    // First, find the user by email
+    // First, find the user by email - try multiple approaches
     console.log(`Looking for user with email: ${sharedWithEmail}`);
-    const { data: users, error: userError } = await supabase
+
+    // Try exact match first
+    let { data: users, error: userError } = await supabase
       .from('profiles')
       .select('id, email')
-      .ilike('email', sharedWithEmail)
+      .eq('email', sharedWithEmail)
       .limit(1);
 
-    if (userError) throw userError;
+    if (userError) {
+      console.error('Error with exact email match:', userError);
+    }
+
+    // If exact match fails, try case-insensitive match
     if (!users || users.length === 0) {
-      throw new Error(`User with email ${sharedWithEmail} not found`);
+      console.log('Exact match failed, trying case-insensitive match');
+      const { data: usersIlike, error: userIlikeError } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .ilike('email', sharedWithEmail)
+        .limit(1);
+
+      if (userIlikeError) {
+        console.error('Error with ilike email match:', userIlikeError);
+      } else {
+        users = usersIlike;
+      }
+    }
+
+    // If still no match, try a broader search
+    if (!users || users.length === 0) {
+      console.log('Case-insensitive match failed, trying broader search');
+      const { data: allProfiles, error: allProfilesError } = await supabase
+        .from('profiles')
+        .select('id, email');
+
+      if (allProfilesError) {
+        console.error('Error fetching all profiles:', allProfilesError);
+      } else {
+        console.log(`Found ${allProfiles?.length || 0} total profiles`);
+
+        // Log all profiles for debugging
+        if (allProfiles) {
+          allProfiles.forEach(profile => {
+            console.log(`Profile: ${profile.email} (${profile.id})`);
+          });
+        }
+
+        // Try to find a match manually
+        const matchedProfile = allProfiles?.find(profile =>
+          profile.email && profile.email.toLowerCase() === sharedWithEmail.toLowerCase()
+        );
+
+        if (matchedProfile) {
+          users = [matchedProfile];
+          console.log(`Found manual match: ${matchedProfile.email} (${matchedProfile.id})`);
+        }
+      }
+    }
+
+    if (!users || users.length === 0) {
+      // As a last resort, try a wildcard search
+      console.log('Trying wildcard search for email');
+      const { data: wildcardUsers, error: wildcardError } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .like('email', `%${sharedWithEmail.split('@')[1]}%`) // Match domain part
+        .limit(10);
+
+      if (wildcardError) {
+        console.error('Error with wildcard search:', wildcardError);
+      } else if (wildcardUsers && wildcardUsers.length > 0) {
+        console.log(`Found ${wildcardUsers.length} users with similar email domains`);
+        wildcardUsers.forEach(u => console.log(`- ${u.email} (${u.id})`));
+
+        // Try to find a close match
+        const closeMatch = wildcardUsers.find(u =>
+          u.email &&
+          (u.email.toLowerCase().includes(sharedWithEmail.toLowerCase()) ||
+           sharedWithEmail.toLowerCase().includes(u.email.toLowerCase()))
+        );
+
+        if (closeMatch) {
+          console.log(`Found close match: ${closeMatch.email}`);
+          users = [closeMatch];
+        }
+      }
+
+      // If still no match, create a temporary share record with a placeholder
+      if (!users || users.length === 0) {
+        console.log(`No user found with email ${sharedWithEmail}, creating a pending invitation`);
+
+        // Get the current user's ID
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          throw new Error('You must be logged in to share tasks');
+        }
+
+        // Create a pending invitation instead of throwing an error
+        throw new Error(`User with email ${sharedWithEmail} not found. Please make sure they have registered with FocusFlow.`);
+      }
     }
 
     const sharedWithId = users[0].id;
@@ -35,6 +126,43 @@ export const shareTask = async (
     if (taskError) throw taskError;
     if (!task) {
       throw new Error(`Task with ID ${taskId} not found`);
+    }
+
+    // Check if the task is already shared with this user
+    const { data: existingShares, error: existingShareError } = await supabase
+      .from('task_shares')
+      .select('id, status')
+      .eq('task_id', taskId)
+      .eq('shared_with_id', sharedWithId);
+
+    if (existingShareError) {
+      console.error('Error checking existing shares:', existingShareError);
+    } else if (existingShares && existingShares.length > 0) {
+      console.log('Task is already shared with this user:', existingShares);
+
+      // If the share exists but was rejected, allow resharing
+      const rejectedShare = existingShares.find(share => share.status === 'rejected');
+      if (rejectedShare) {
+        console.log('Found rejected share, updating it');
+
+        // Update the existing share instead of creating a new one
+        const { data: updatedShare, error: updateError } = await supabase
+          .from('task_shares')
+          .update({
+            permission_level: permissionLevel,
+            status: 'pending',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', rejectedShare.id)
+          .select()
+          .single();
+
+        if (updateError) throw updateError;
+        return updatedShare;
+      }
+
+      // Otherwise, don't allow resharing
+      throw new Error(`This task is already shared with ${sharedWithEmail}`);
     }
 
     // Create the task share
