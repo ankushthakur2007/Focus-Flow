@@ -88,13 +88,48 @@ const TaskRecommendation = ({ taskId }: TaskRecommendationProps) => {
           <div className="mb-2">
             <span className="font-medium">Why it matters:</span> {recommendation.reasoning}
           </div>
+
+          {recommendation.priority_level && (
+            <div className="mb-2 flex items-center">
+              <span className="font-medium mr-2">Priority:</span>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                recommendation.priority_level.toLowerCase() === 'high'
+                  ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                  : recommendation.priority_level.toLowerCase() === 'medium'
+                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+                    : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+              }`}>
+                {recommendation.priority_level}
+              </span>
+            </div>
+          )}
+
+          {recommendation.estimated_time && (
+            <div className="mb-2">
+              <span className="font-medium">Estimated time:</span> {recommendation.estimated_time}
+            </div>
+          )}
+
           <div className="mb-2">
             <span className="font-medium">Suggestion:</span> {recommendation.suggestion}
           </div>
-          <div>
+
+          {recommendation.steps && recommendation.steps.length > 0 && (
+            <div className="mb-2">
+              <span className="font-medium">Steps:</span>
+              <ol className="list-decimal pl-5 mt-1 space-y-1">
+                {recommendation.steps.map((step, index) => (
+                  <li key={index}>{step}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          <div className="mb-2">
             <span className="font-medium">Mood tip:</span> {recommendation.mood_tip}
           </div>
-          <div className="mt-2 text-xs text-gray-500 flex flex-wrap justify-between items-center gap-2">
+
+          <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 flex flex-wrap justify-between items-center gap-2">
             <span className="whitespace-nowrap">Based on mood: {recommendation.mood}</span>
             {recommendation.created_at && (
               <span className="whitespace-nowrap text-right">

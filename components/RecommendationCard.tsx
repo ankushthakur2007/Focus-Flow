@@ -13,7 +13,9 @@ const RecommendationCard = ({ recommendation, onRefresh, loading }: Recommendati
   const [expandedSections, setExpandedSections] = useState<{[key: string]: boolean}>({
     why: false,
     approach: false,
-    mood: false
+    mood: false,
+    steps: false,
+    details: false
   });
 
   const toggleSection = (section: string) => {
@@ -111,6 +113,86 @@ const RecommendationCard = ({ recommendation, onRefresh, loading }: Recommendati
             <p className="text-gray-600 dark:text-gray-400 whitespace-pre-line">
               {recommendation.suggestion}
             </p>
+          </div>
+        </div>
+
+        {/* Step-by-Step Guide Section */}
+        {recommendation.steps && recommendation.steps.length > 0 && (
+          <div className="cursor-pointer">
+            <div
+              className="p-4 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-750"
+              onClick={() => toggleSection('steps')}
+            >
+              <h3 className="text-md font-semibold text-gray-700 dark:text-gray-300 flex items-center">
+                <span className="mr-2">📋</span>
+                Step-by-Step Guide
+              </h3>
+              <svg
+                className={`w-5 h-5 text-gray-500 transition-transform ${expandedSections.steps ? 'transform rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+
+            <div className={`px-4 pb-4 ${expandedSections.steps ? 'block' : 'hidden'}`}>
+              <ol className="list-decimal pl-5 space-y-2 text-gray-600 dark:text-gray-400">
+                {recommendation.steps.map((step, index) => (
+                  <li key={index} className="pl-1">{step}</li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        )}
+
+        {/* Task Details Section */}
+        <div className="cursor-pointer">
+          <div
+            className="p-4 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-750"
+            onClick={() => toggleSection('details')}
+          >
+            <h3 className="text-md font-semibold text-gray-700 dark:text-gray-300 flex items-center">
+              <span className="mr-2">⏱️</span>
+              Task Details
+            </h3>
+            <svg
+              className={`w-5 h-5 text-gray-500 transition-transform ${expandedSections.details ? 'transform rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+
+          <div className={`px-4 pb-4 ${expandedSections.details ? 'block' : 'hidden'}`}>
+            <div className="flex flex-col space-y-2">
+              {recommendation.priority_level && (
+                <div className="flex items-center">
+                  <span className="font-medium mr-2">Priority:</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    recommendation.priority_level.toLowerCase() === 'high'
+                      ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                      : recommendation.priority_level.toLowerCase() === 'medium'
+                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+                        : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                  }`}>
+                    {recommendation.priority_level}
+                  </span>
+                </div>
+              )}
+
+              {recommendation.estimated_time && (
+                <div className="flex items-center">
+                  <span className="font-medium mr-2">Estimated Time:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{recommendation.estimated_time}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

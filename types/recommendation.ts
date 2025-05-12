@@ -7,5 +7,8 @@ export interface Recommendation {
   suggestion: string;
   mood_tip: string;
   mood: string;
+  priority_level?: string;
+  estimated_time?: string;
+  steps?: string[];
   created_at?: string;
 }

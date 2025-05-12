@@ -1,12 +1,16 @@
 import { Task } from '../types/task';
 import { Recommendation } from '../types/recommendation';
 import { GEMINI_API_KEY } from '../config/api-keys';
+import { supabase } from './supabase';
 
 interface RecommendationResponse {
   recommended_task: string;
   reasoning: string;
   suggestion: string;
   mood_tip: string;
+  priority_level?: string;
+  estimated_time?: string;
+  steps?: string[];
 }
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
@@ -17,7 +21,7 @@ export const getRecommendation = async (
 ): Promise<RecommendationResponse> => {
   try {
     // Create a prompt for the AI
-    const prompt = createPrompt(tasks, currentMood);
+    const prompt = await createPrompt(tasks, currentMood);
 
     // Make the API request
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
@@ -92,7 +96,7 @@ export const getTaskRecommendation = async (
 ): Promise<RecommendationResponse> => {
   try {
     // Create a prompt for the AI
-    const prompt = createTaskPrompt(task, currentMood);
+    const prompt = await createTaskPrompt(task, currentMood);
 
     // Make the API request
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
@@ -161,7 +165,44 @@ export const getTaskRecommendation = async (
   }
 };
 
-const createPrompt = (tasks: Task[], currentMood: string): string => {
+const createPrompt = async (tasks: Task[], currentMood: string): Promise<string> => {
+  // Get user's task history and mood patterns
+  let userTaskHistory = '';
+  let userMoodHistory = '';
+
+  if (tasks.length > 0 && tasks[0].user_id) {
+    // Get recently completed tasks
+    const { data: completedTasks } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('user_id', tasks[0].user_id)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (completedTasks && completedTasks.length > 0) {
+      userTaskHistory = 'Recently completed tasks:\n' +
+        completedTasks.map((task: Task) =>
+          `- ${task.title} (Priority: ${task.priority}, Category: ${task.category})`
+        ).join('\n');
+    }
+
+    // Get recent mood entries
+    const { data: moodEntries } = await supabase
+      .from('moods')
+      .select('*')
+      .eq('user_id', tasks[0].user_id)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (moodEntries && moodEntries.length > 0) {
+      userMoodHistory = 'Recent mood patterns:\n' +
+        moodEntries.map((entry: any) =>
+          `- ${entry.mood} (${new Date(entry.created_at).toLocaleDateString()})`
+        ).join('\n');
+    }
+  }
+
   // Convert tasks to a string representation
   const tasksString = tasks.map((task) => {
     return `
@@ -175,29 +216,80 @@ Status: ${task.status}
 
   // Create the prompt
   return `
-You are an AI assistant for a productivity app called FocusFlow. Based on the user's current mood and pending tasks, recommend which task they should tackle next.
+You are an AI assistant for a productivity app called FocusFlow. Based on the user's current mood, pending tasks, and historical patterns, recommend which task they should tackle next and how to prioritize their work.
 
 Current Mood: ${currentMood}
 
 Pending Tasks:
 ${tasksString}
 
-Please provide a recommendation in the following JSON format:
+${userTaskHistory ? userTaskHistory + '\n\n' : ''}
+${userMoodHistory ? userMoodHistory + '\n\n' : ''}
+
+Please analyze the tasks and provide a recommendation in the following JSON format:
 {
   "recommended_task": "The title of the recommended task",
-  "reasoning": "A brief explanation of why this task is recommended",
-  "suggestion": "A helpful suggestion for how to approach the task",
-  "mood_tip": "A tip to help the user maintain or improve their mood while working"
+  "reasoning": "A detailed explanation of why this task is recommended based on priority, mood, and user patterns",
+  "suggestion": "A helpful, actionable suggestion for how to approach the task",
+  "mood_tip": "A personalized tip to help the user maintain or improve their mood while working",
+  "priority_level": "A suggested priority level (High/Medium/Low)",
+  "estimated_time": "An estimated time to complete this task (e.g., '30 minutes', '1-2 hours')",
+  "steps": ["Step 1: ...", "Step 2: ...", "Step 3: ..."]
 }
 
-If there are no tasks, suggest creating a new task based on the user's mood.
+Consider the following in your recommendation:
+1. The user's current mood and how it might affect their energy and focus
+2. Task priority and urgency
+3. Balance between important and urgent tasks
+4. The user's recent productivity patterns
+5. Time of day and potential energy levels
+
+If there are no tasks, suggest creating a new task based on the user's mood and historical patterns.
 `;
 };
 
-const createTaskPrompt = (task: Task, currentMood: string): string => {
+const createTaskPrompt = async (task: Task, currentMood: string): Promise<string> => {
+  // Get user's mood patterns and similar tasks
+  let userMoodHistory = '';
+  let similarTasksHistory = '';
+
+  if (task.user_id) {
+    // Get recently completed tasks in the same category
+    const { data: similarTasks } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('user_id', task.user_id)
+      .eq('category', task.category)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false })
+      .limit(3);
+
+    if (similarTasks && similarTasks.length > 0) {
+      similarTasksHistory = 'Similar completed tasks in this category:\n' +
+        similarTasks.map((t: Task) =>
+          `- ${t.title} (Priority: ${t.priority})`
+        ).join('\n');
+    }
+
+    // Get recent mood entries
+    const { data: moodEntries } = await supabase
+      .from('moods')
+      .select('*')
+      .eq('user_id', task.user_id)
+      .order('created_at', { ascending: false })
+      .limit(3);
+
+    if (moodEntries && moodEntries.length > 0) {
+      userMoodHistory = 'Recent mood patterns:\n' +
+        moodEntries.map((entry: any) =>
+          `- ${entry.mood} (${new Date(entry.created_at).toLocaleDateString()})`
+        ).join('\n');
+    }
+  }
+
   // Create the prompt
   return `
-You are an AI assistant for a productivity app called FocusFlow. Based on the user's current mood and the details of a specific task, provide personalized recommendations for how to approach this task.
+You are an AI assistant for a productivity app called FocusFlow. Based on the user's current mood, task details, and historical patterns, provide personalized recommendations for how to approach this specific task.
 
 Current Mood: ${currentMood}
 
@@ -208,14 +300,27 @@ Priority: ${task.priority}
 Category: ${task.category}
 Status: ${task.status}
 
-Please provide a recommendation in the following JSON format:
+${similarTasksHistory ? similarTasksHistory + '\n\n' : ''}
+${userMoodHistory ? userMoodHistory + '\n\n' : ''}
+
+Please provide a detailed recommendation in the following JSON format:
 {
   "recommended_task": "${task.title}",
-  "reasoning": "A brief explanation of why this task is important and how it relates to the user's current mood",
-  "suggestion": "A detailed, step-by-step approach for how to tackle this specific task efficiently",
-  "mood_tip": "A personalized tip to help the user maintain or improve their mood while working on this specific task"
+  "reasoning": "A detailed explanation of why this task is important and how it relates to the user's current mood",
+  "suggestion": "A comprehensive, step-by-step approach for how to tackle this specific task efficiently",
+  "mood_tip": "A personalized tip to help the user maintain or improve their mood while working on this specific task",
+  "priority_level": "A suggested priority level (High/Medium/Low) based on the task's importance and urgency",
+  "estimated_time": "An estimated time to complete this task (e.g., '30 minutes', '1-2 hours')",
+  "steps": ["Step 1: ...", "Step 2: ...", "Step 3: ..."]
 }
 
-Make your suggestions specific to the task description and the user's current mood. Be practical, actionable, and motivating.
+Make your suggestions specific to the task description and the user's current mood. Consider:
+1. Breaking down complex tasks into manageable steps
+2. Suggesting specific techniques relevant to the task category
+3. Accounting for the user's current emotional state
+4. Providing actionable, practical advice
+5. Suggesting ways to make the task more engaging or enjoyable
+
+Be practical, actionable, and motivating. Focus on helping the user complete this task successfully while maintaining their well-being.
 `;
 };

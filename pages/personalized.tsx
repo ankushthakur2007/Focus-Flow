@@ -83,6 +83,9 @@ const PersonalizedPage = () => {
                 suggestion: rec.suggestion,
                 mood_tip: rec.mood_tip,
                 mood: rec.mood,
+                priority_level: rec.priority_level,
+                estimated_time: rec.estimated_time,
+                steps: rec.steps,
                 created_at: rec.created_at
               });
             }
@@ -135,6 +138,9 @@ const PersonalizedPage = () => {
                 suggestion: result.suggestion,
                 mood_tip: result.mood_tip,
                 mood: currentMood,
+                priority_level: result.priority_level,
+                estimated_time: result.estimated_time,
+                steps: result.steps,
                 created_at: new Date().toISOString()
               };
 
@@ -149,6 +155,9 @@ const PersonalizedPage = () => {
                   suggestion: result.suggestion,
                   mood_tip: result.mood_tip,
                   mood: currentMood,
+                  priority_level: result.priority_level,
+                  estimated_time: result.estimated_time,
+                  steps: result.steps,
                   created_at: new Date().toISOString(),
                 }]);
 
@@ -242,6 +251,9 @@ const PersonalizedPage = () => {
             suggestion: result.suggestion,
             mood_tip: result.mood_tip,
             mood: currentMood,
+            priority_level: result.priority_level,
+            estimated_time: result.estimated_time,
+            steps: result.steps,
             created_at: new Date().toISOString(),
           }]);
 
@@ -260,6 +272,9 @@ const PersonalizedPage = () => {
                 suggestion: result.suggestion,
                 mood_tip: result.mood_tip,
                 mood: currentMood,
+                priority_level: result.priority_level,
+                estimated_time: result.estimated_time,
+                steps: result.steps,
                 created_at: new Date().toISOString()
               };
             }
