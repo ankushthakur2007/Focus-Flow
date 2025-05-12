@@ -27,6 +27,9 @@ const Layout = ({ children }: LayoutProps) => {
 
   const isActive = (path: string) => router.pathname === path;
 
+  // Check if the current page is a debug page that should be accessible without auth
+  const isDebugPage = router.pathname.includes('debug') || router.pathname.includes('oauth-debug') || router.pathname.includes('direct-oauth-test');
+
   return (
     <>
       <Head>
@@ -36,7 +39,7 @@ const Layout = ({ children }: LayoutProps) => {
       </Head>
 
       <div className="min-h-screen flex flex-col">
-        {user && !loading && (
+        {(user && !loading) || isDebugPage ? (
           <>
             <header className={`bg-white dark:bg-gray-800 shadow fixed top-0 left-0 right-0 z-20 transition-all duration-300 ${scrolled ? 'shadow-md' : ''}`}>
               <div className="container mx-auto px-4">
@@ -197,7 +200,7 @@ const Layout = ({ children }: LayoutProps) => {
             {/* Spacer to prevent content from being hidden under fixed header */}
             <div className="h-16"></div>
           </>
-        )}
+        ) : null}
 
         <main className="flex-grow">
           {children}
