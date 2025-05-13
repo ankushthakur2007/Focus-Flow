@@ -31,5 +31,4 @@ rm -f migrations/create-task-sharing-tables.sql
 rm -f migrations/fix-task-shares-view.sql
 
 echo "Shared task files removed successfully!"
-echo "Now you need to update the remaining files to remove shared task references."
-echo "Please follow the instructions in the REMOVE-SHARED-TASKS.md file."
+echo "Now updating the remaining files to remove shared task references."
