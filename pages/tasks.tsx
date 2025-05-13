@@ -15,7 +15,7 @@ const TasksPage = () => {
 
   useEffect(() => {
     if (!user) return;
-    
+
     let isMounted = true;
 
     const fetchTasks = async () => {
@@ -115,7 +115,8 @@ const TasksPage = () => {
     title: string,
     description: string,
     priority: string,
-    category: string
+    category: string,
+    dueDate?: string
   ) => {
     if (!user) return;
 
@@ -130,6 +131,7 @@ const TasksPage = () => {
           category,
           status: 'pending',
           user_id: user.id,
+          due_date: dueDate,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }])

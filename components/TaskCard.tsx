@@ -89,6 +89,16 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
               <span className={`text-xs font-medium ${getPriorityTextColor(task.priority)}`}>
                 {task.priority.toUpperCase()}
               </span>
+              {task.due_date && (
+                <div className="flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 mr-1 ${new Date(task.due_date) < new Date() ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`} viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                  </svg>
+                  <span className={`text-xs ${new Date(task.due_date) < new Date() ? 'text-red-500 font-medium' : 'text-gray-600 dark:text-gray-400'}`}>
+                    {format(parseISO(task.due_date), 'MMM d')}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -132,6 +142,11 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
             {task.created_at && (
               <span className="text-xs text-gray-500 dark:text-gray-400">
                 Created: {format(parseISO(task.created_at), 'MMM d, yyyy')}
+              </span>
+            )}
+            {task.due_date && (
+              <span className={`text-xs ${new Date(task.due_date) < new Date() ? 'text-red-500 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                Due: {format(parseISO(task.due_date), 'MMM d, yyyy h:mm a')}
               </span>
             )}
           </div>

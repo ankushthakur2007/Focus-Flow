@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import TouchFriendlyButton from './TouchFriendlyButton';
+import { format } from 'date-fns';
 
 interface TaskFormProps {
-  onSubmit: (title: string, description: string, priority: string, category: string) => void;
+  onSubmit: (title: string, description: string, priority: string, category: string, dueDate?: string) => void;
   onCancel: () => void;
 }
 
@@ -11,15 +12,17 @@ const TaskForm = ({ onSubmit, onCancel }: TaskFormProps) => {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('medium');
   const [category, setCategory] = useState('other');
+  const [dueDate, setDueDate] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (title.trim()) {
-      onSubmit(title, description, priority, category);
+      onSubmit(title, description, priority, category, dueDate || undefined);
       setTitle('');
       setDescription('');
       setPriority('medium');
       setCategory('other');
+      setDueDate('');
     }
   };
 
@@ -56,7 +59,7 @@ const TaskForm = ({ onSubmit, onCancel }: TaskFormProps) => {
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-4 mb-7 sm:mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-4 mb-5 sm:mb-4">
         <div>
           <label htmlFor="priority" className="block text-base sm:text-sm font-medium mb-2 sm:mb-1">
             Priority
@@ -91,6 +94,20 @@ const TaskForm = ({ onSubmit, onCancel }: TaskFormProps) => {
             <option value="other">Other</option>
           </select>
         </div>
+      </div>
+
+      <div className="mb-7 sm:mb-6">
+        <label htmlFor="dueDate" className="block text-base sm:text-sm font-medium mb-2 sm:mb-1">
+          Due Date (Optional)
+        </label>
+        <input
+          type="datetime-local"
+          id="dueDate"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+          className="input text-base sm:text-sm py-3 sm:py-2"
+        />
+        <p className="text-xs text-gray-500 mt-1">Set a due date to receive notifications</p>
       </div>
 
       <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:gap-2 sm:space-x-2">
