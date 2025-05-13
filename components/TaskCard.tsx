@@ -1,8 +1,9 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { Task } from '../types/task';
 import { format, parseISO } from 'date-fns';
 import TaskRecommendation from './TaskRecommendation';
 import AuthContext from './AuthContext';
+import { supabase } from '../services/supabase';
 
 interface TaskCardProps {
   task: Task;
@@ -14,6 +15,52 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
   // Each card has its own expanded state
   const [expanded, setExpanded] = useState(false);
   const { user } = useContext(AuthContext);
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(
+    task.notification_settings?.notifications_enabled !== false // Default to true if not explicitly set to false
+  );
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Update notification settings in the database
+  const toggleNotifications = async (enabled: boolean) => {
+    if (!user || isUpdating) return;
+
+    try {
+      setIsUpdating(true);
+
+      // Get current notification settings or use default
+      const currentSettings = task.notification_settings || {
+        custom_reminder: false,
+        reminder_time: 24,
+        reminder_sent: false,
+        notifications_enabled: true
+      };
+
+      // Update the notifications_enabled property
+      const updatedSettings = {
+        ...currentSettings,
+        notifications_enabled: enabled
+      };
+
+      // Update in database
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          notification_settings: updatedSettings
+        })
+        .eq('id', task.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setNotificationsEnabled(enabled);
+    } catch (error) {
+      console.error('Error updating notification settings:', error);
+      // Revert UI state if update failed
+      setNotificationsEnabled(!enabled);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -149,6 +196,27 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
                 Due: {format(parseISO(task.due_date), 'MMM d, yyyy h:mm a')}
               </span>
             )}
+          </div>
+
+          {/* Notification Toggle */}
+          <div className="mt-3 flex items-center">
+            <label htmlFor={`notification-toggle-${task.id}`} className="flex items-center cursor-pointer">
+              <div className="relative">
+                <input
+                  id={`notification-toggle-${task.id}`}
+                  type="checkbox"
+                  className="sr-only"
+                  checked={notificationsEnabled}
+                  onChange={(e) => toggleNotifications(e.target.checked)}
+                  disabled={isUpdating}
+                />
+                <div className={`block w-10 h-6 rounded-full ${notificationsEnabled ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'} transition-colors duration-300`}></div>
+                <div className={`absolute left-1 top-1 bg-white dark:bg-gray-200 w-4 h-4 rounded-full transition-transform duration-300 ${notificationsEnabled ? 'transform translate-x-4' : ''}`}></div>
+              </div>
+              <div className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                {isUpdating ? 'Updating...' : 'Enable notifications'}
+              </div>
+            </label>
           </div>
         </div>
 

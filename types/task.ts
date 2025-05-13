@@ -11,6 +11,12 @@ export interface Task {
   updated_at?: string;
   is_shared?: boolean;
   shared_by?: string;
+  notification_settings?: {
+    custom_reminder: boolean;
+    reminder_time: number;
+    reminder_sent: boolean;
+    notifications_enabled?: boolean;
+  };
 }
 
 export interface TaskShare {

@@ -24,6 +24,13 @@ CREATE TABLE IF NOT EXISTS tasks (
   priority TEXT CHECK (priority IN ('high', 'medium', 'low')) DEFAULT 'medium',
   category TEXT CHECK (category IN ('work', 'study', 'chores', 'health', 'social', 'other')) DEFAULT 'other',
   status TEXT CHECK (status IN ('pending', 'in_progress', 'completed')) DEFAULT 'pending',
+  due_date TIMESTAMP WITH TIME ZONE,
+  notification_settings JSONB DEFAULT '{
+    "custom_reminder": false,
+    "reminder_time": 24,
+    "reminder_sent": false,
+    "notifications_enabled": true
+  }'::JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
