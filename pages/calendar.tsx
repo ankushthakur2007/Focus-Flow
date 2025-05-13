@@ -49,7 +49,7 @@ export default function Calendar() {
         start.setHours(0, 0, 0, 0);
         const end = new Date(currentDate);
         end.setHours(23, 59, 59, 999);
-        data = await fetchCalendarEvents(start, end);
+        data = await fetchMonthEvents(currentDate);
       }
       setEvents(data);
       setError(null);
