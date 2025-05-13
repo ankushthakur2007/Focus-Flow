@@ -7,6 +7,7 @@ import AuthContext from '../components/AuthContext';
 import { ThemeProvider } from '../components/ThemeContext';
 import { Session, User } from '@supabase/supabase-js';
 import Head from 'next/head';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 function MyApp({ Component, pageProps }: AppProps) {
   const [user, setUser] = useState<User | null>(null);
@@ -103,39 +104,41 @@ function MyApp({ Component, pageProps }: AppProps) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, refreshSession, authError }}>
-      <ThemeProvider user={user}>
-        <Head>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-          <meta name="theme-color" content="#0073ff" />
-          <meta name="apple-mobile-web-app-capable" content="yes" />
-          <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        </Head>
-        <Layout>
-          {authError && !loading && (
-            <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 p-4 m-4 rounded-md">
-              <h3 className="font-bold mb-2">Authentication Error</h3>
-              <p>{authError}</p>
-              <div className="mt-4 flex space-x-3">
-                <button
-                  onClick={refreshSession}
-                  className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md"
-                >
-                  Refresh Session
-                </button>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md"
-                >
-                  Refresh Page
-                </button>
+    <ErrorBoundary>
+      <AuthContext.Provider value={{ user, session, loading, refreshSession, authError }}>
+        <ThemeProvider user={user}>
+          <Head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <meta name="theme-color" content="#0073ff" />
+            <meta name="apple-mobile-web-app-capable" content="yes" />
+            <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+          </Head>
+          <Layout>
+            {authError && !loading && (
+              <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 p-4 m-4 rounded-md">
+                <h3 className="font-bold mb-2">Authentication Error</h3>
+                <p>{authError}</p>
+                <div className="mt-4 flex space-x-3">
+                  <button
+                    onClick={refreshSession}
+                    className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md"
+                  >
+                    Refresh Session
+                  </button>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md"
+                  >
+                    Refresh Page
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
-          <Component {...pageProps} />
-        </Layout>
-      </ThemeProvider>
-    </AuthContext.Provider>
+            )}
+            <Component {...pageProps} />
+          </Layout>
+        </ThemeProvider>
+      </AuthContext.Provider>
+    </ErrorBoundary>
   );
 }
 

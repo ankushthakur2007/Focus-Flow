@@ -3,12 +3,13 @@ import { supabase } from '../services/supabase';
 import { Recommendation } from '../types/recommendation';
 import AuthContext from './AuthContext';
 import { format, parseISO } from 'date-fns';
+import ErrorBoundary from './ErrorBoundary';
 
 interface TaskRecommendationProps {
   taskId: string;
 }
 
-const TaskRecommendation = ({ taskId }: TaskRecommendationProps) => {
+const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   // Each recommendation manages its own expanded state
@@ -265,6 +266,22 @@ const TaskRecommendation = ({ taskId }: TaskRecommendationProps) => {
         </div>
       </div>
     </div>
+  );
+};
+
+// Wrapper component with error boundary
+const TaskRecommendation = (props: TaskRecommendationProps) => {
+  return (
+    <ErrorBoundary fallback={
+      <div className="text-sm text-gray-500 py-2">
+        <div>There was an error loading AI insights for this task.</div>
+        <div className="mt-2 text-xs">
+          Please try refreshing the page.
+        </div>
+      </div>
+    }>
+      <TaskRecommendationContent {...props} />
+    </ErrorBoundary>
   );
 };
 
