@@ -4,6 +4,8 @@ import { Recommendation } from '../types/recommendation';
 import AuthContext from './AuthContext';
 import { format, parseISO } from 'date-fns';
 import ErrorBoundary from './ErrorBoundary';
+import { getTaskRecommendation } from '../services/gemini';
+import { Task } from '../types/task';
 
 interface TaskRecommendationProps {
   taskId: string;
@@ -12,73 +14,159 @@ interface TaskRecommendationProps {
 const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [regenerating, setRegenerating] = useState<boolean>(false);
   // Each recommendation manages its own expanded state
   const [expanded, setExpanded] = useState<boolean>(false);
+  const { user } = useContext(AuthContext);
+
+  const fetchRecommendation = async () => {
+    let isMounted = true;
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // First, get the task to check if it's a shared task
+      const { data: taskData, error: taskError } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('id', taskId)
+        .single();
+
+      if (taskError) {
+        console.error('Error fetching task:', taskError);
+        if (isMounted) {
+          setError('Could not fetch task details');
+          setLoading(false);
+        }
+        return;
+      }
+
+      // Get the recommendation
+      const { data, error } = await supabase
+        .from('recommendations')
+        .select('*')
+        .eq('task_id', taskId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error('Error fetching recommendation:', error);
+        if (isMounted) {
+          setError('Could not fetch recommendation');
+          setLoading(false);
+        }
+        return;
+      }
+
+      if (data && data.length > 0 && isMounted) {
+        setRecommendation(data[0] as Recommendation);
+        setLoading(false);
+      } else {
+        // If no recommendation found, check if this is a shared task
+        // and try to fetch the recommendation using the task owner's user_id
+        if (taskData) {
+          console.log('Trying to fetch recommendation for shared task with owner ID:', taskData.user_id);
+
+          const { data: sharedData, error: sharedError } = await supabase
+            .from('recommendations')
+            .select('*')
+            .eq('task_id', taskId)
+            .eq('user_id', taskData.user_id)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (sharedError) {
+            console.error('Error fetching shared recommendation:', sharedError);
+            if (isMounted) {
+              setError('Could not fetch shared recommendation');
+              setLoading(false);
+            }
+          } else if (sharedData && sharedData.length > 0 && isMounted) {
+            console.log('Found recommendation for shared task:', sharedData[0]);
+            setRecommendation(sharedData[0] as Recommendation);
+            setLoading(false);
+          } else if (isMounted) {
+            // No recommendation found, try to generate one
+            await generateNewRecommendation(taskData);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error in recommendation flow:', error);
+      if (isMounted) {
+        setError('An unexpected error occurred');
+        setLoading(false);
+      }
+    }
+    
+    return () => {
+      isMounted = false;
+    };
+  };
+
+  const generateNewRecommendation = async (taskData: Task) => {
+    if (!user) return;
+    
+    setRegenerating(true);
+    setError(null);
+    
+    try {
+      // Get the most recent mood
+      const { data: moodData, error: moodError } = await supabase
+        .from('moods')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('timestamp', { ascending: false })
+        .limit(1);
+
+      if (moodError) {
+        throw moodError;
+      }
+
+      const currentMood = moodData && moodData.length > 0 ? moodData[0].name : 'neutral';
+      
+      // Generate recommendation from Gemini AI
+      const result = await getTaskRecommendation(taskData, currentMood);
+
+      // Store the recommendation in Supabase
+      const { error: recError, data: newRec } = await supabase
+        .from('recommendations')
+        .insert([{
+          user_id: user.id,
+          task_id: taskId,
+          recommended_task: result.recommended_task,
+          reasoning: result.reasoning,
+          suggestion: result.suggestion,
+          mood_tip: result.mood_tip,
+          mood: currentMood,
+          priority_level: result.priority_level,
+          estimated_time: result.estimated_time,
+          steps: result.steps,
+          created_at: new Date().toISOString(),
+        }])
+        .select();
+
+      if (recError) {
+        console.error('Error saving recommendation:', recError);
+        throw recError;
+      }
+
+      if (newRec && newRec.length > 0) {
+        setRecommendation(newRec[0] as Recommendation);
+      }
+    } catch (error) {
+      console.error('Error generating recommendation:', error);
+      setError('Failed to generate AI recommendation');
+    } finally {
+      setRegenerating(false);
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
     
-    const fetchRecommendation = async () => {
-      setLoading(true);
-      try {
-        // First, get the task to check if it's a shared task
-        const { data: taskData, error: taskError } = await supabase
-          .from('tasks')
-          .select('user_id')
-          .eq('id', taskId)
-          .single();
-
-        if (taskError) {
-          console.error('Error fetching task:', taskError);
-          throw taskError;
-        }
-
-        // Get the recommendation
-        const { data, error } = await supabase
-          .from('recommendations')
-          .select('*')
-          .eq('task_id', taskId)
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (error) {
-          console.error('Error fetching recommendation:', error);
-          throw error;
-        }
-
-        if (data && data.length > 0 && isMounted) {
-          setRecommendation(data[0] as Recommendation);
-        } else {
-          // If no recommendation found, check if this is a shared task
-          // and try to fetch the recommendation using the task owner's user_id
-          if (taskData) {
-            console.log('Trying to fetch recommendation for shared task with owner ID:', taskData.user_id);
-
-            const { data: sharedData, error: sharedError } = await supabase
-              .from('recommendations')
-              .select('*')
-              .eq('task_id', taskId)
-              .eq('user_id', taskData.user_id)
-              .order('created_at', { ascending: false })
-              .limit(1);
-
-            if (sharedError) {
-              console.error('Error fetching shared recommendation:', sharedError);
-            } else if (sharedData && sharedData.length > 0 && isMounted) {
-              console.log('Found recommendation for shared task:', sharedData[0]);
-              setRecommendation(sharedData[0] as Recommendation);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error in recommendation flow:', error);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
     fetchRecommendation();
     
     // Cleanup function to prevent state updates after unmounting
@@ -87,20 +175,7 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
     };
   }, [taskId]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-3">
-        <div className="animate-pulse flex space-x-2">
-          <div className="h-2 w-2 bg-primary-500 rounded-full"></div>
-          <div className="h-2 w-2 bg-primary-500 rounded-full"></div>
-          <div className="h-2 w-2 bg-primary-500 rounded-full"></div>
-        </div>
-      </div>
-    );
-  }
-
   // Check if this is a shared task with non-admin permission
-  const { user } = useContext(AuthContext);
   const [permissionLevel, setPermissionLevel] = useState<string | null>(null);
   const [isSharedTask, setIsSharedTask] = useState<boolean>(false);
 
@@ -162,6 +237,68 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
     };
   }, [user, taskId]);
 
+  const handleRegenerateRecommendation = async () => {
+    if (!user || !taskId) return;
+    
+    try {
+      const { data: taskData, error: taskError } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('id', taskId)
+        .single();
+
+      if (taskError) {
+        console.error('Error fetching task for regeneration:', taskError);
+        setError('Could not fetch task details');
+        return;
+      }
+
+      await generateNewRecommendation(taskData);
+    } catch (error) {
+      console.error('Error in regeneration flow:', error);
+      setError('Failed to regenerate recommendation');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-3">
+        <div className="animate-pulse flex space-x-2">
+          <div className="h-2 w-2 bg-primary-500 rounded-full"></div>
+          <div className="h-2 w-2 bg-primary-500 rounded-full"></div>
+          <div className="h-2 w-2 bg-primary-500 rounded-full"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (regenerating) {
+    return (
+      <div className="text-sm text-gray-500 py-2">
+        <div className="flex items-center">
+          <div className="animate-spin mr-2 h-4 w-4 border-t-2 border-b-2 border-primary-500 rounded-full"></div>
+          Generating new AI insights...
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-sm text-gray-500 py-2">
+        <div>Error: {error}</div>
+        <div className="mt-2">
+          <button 
+            onClick={handleRegenerateRecommendation}
+            className="text-xs text-primary-600 hover:text-primary-800 flex items-center"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // If this is a shared task with non-admin permission, show a message
   if (isSharedTask && permissionLevel !== 'admin') {
     return (
@@ -178,8 +315,13 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
     return (
       <div className="text-sm text-gray-500 py-2">
         <div>No AI insights available for this task yet.</div>
-        <div className="mt-2 text-xs">
-          {loading ? 'Loading recommendations...' : 'Try refreshing the page or checking back later.'}
+        <div className="mt-2 flex items-center">
+          <button 
+            onClick={handleRegenerateRecommendation}
+            className="text-xs text-primary-600 hover:text-primary-800 flex items-center"
+          >
+            Generate insights
+          </button>
         </div>
       </div>
     );
@@ -192,21 +334,32 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
           <span className="mr-2">✨</span>
           AI Insights
         </h4>
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="text-xs text-primary-600 hover:text-primary-800 flex items-center"
-        >
-          {expanded ? 'Hide details' : 'Show details'}
-          <svg
-            className={`w-3 h-3 ml-1 transition-transform ${expanded ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handleRegenerateRecommendation}
+            className="text-xs text-primary-600 hover:text-primary-800 flex items-center"
+            title="Regenerate insights"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-xs text-primary-600 hover:text-primary-800 flex items-center"
+          >
+            {expanded ? 'Hide details' : 'Show details'}
+            <svg
+              className={`w-3 h-3 ml-1 transition-transform ${expanded ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div className={`transition-all duration-300 overflow-hidden ${expanded ? 'max-h-screen opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
