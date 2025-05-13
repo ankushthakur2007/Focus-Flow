@@ -209,8 +209,8 @@ export default function Calendar() {
     }
 
     // Create calendar grid
-    const rows = [];
-    let cells = [];
+    const rows: JSX.Element[][] = [];
+    let cells: JSX.Element[] = [];
 
     days.forEach((day, i) => {
       if (i % 7 !== 0) {
