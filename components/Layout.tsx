@@ -6,6 +6,7 @@ import AuthContext from './AuthContext';
 import ThemeToggle from './ThemeToggle';
 import KeyboardShortcutsHelp from './KeyboardShortcutsHelp';
 import Footer from './Footer';
+import { supabase } from '../services/supabase';
 
 interface LayoutProps {
   children: ReactNode;
@@ -17,6 +18,9 @@ const Layout = ({ children }: LayoutProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
 
   // Handle scroll effect for header
@@ -42,6 +46,89 @@ const Layout = ({ children }: LayoutProps) => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Function to mark a notification as read
+  const markNotificationAsRead = async (notificationId: string) => {
+    try {
+      // Update the notification in the database
+      await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', notificationId);
+
+      // Update the local state
+      setNotifications(prev =>
+        prev.map(notification =>
+          notification.id === notificationId
+            ? { ...notification, is_read: true }
+            : notification
+        )
+      );
+
+      // Update the unread count
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  // Fetch notifications and unread count
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchNotifications = async () => {
+      try {
+        setLoadingNotifications(true);
+
+        // Get unread count
+        const { count, error: countError } = await supabase
+          .from('notifications')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_read', false)
+          .eq('user_id', user.id);
+
+        if (countError) throw countError;
+        setUnreadCount(count || 0);
+
+        // Only fetch notifications when dropdown is open
+        if (notificationsOpen) {
+          const { data, error } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+          if (error) throw error;
+          setNotifications(data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      } finally {
+        setLoadingNotifications(false);
+      }
+    };
+
+    fetchNotifications();
+
+    // Set up real-time subscription for new notifications
+    const subscription = supabase
+      .channel('public:notifications')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}`
+      }, () => {
+        // Increment unread count when new notification is received
+        setUnreadCount(prev => prev + 1);
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user, notificationsOpen]);
 
   // Add keyboard shortcuts for navigation
   useEffect(() => {
@@ -157,19 +244,82 @@ const Layout = ({ children }: LayoutProps) => {
                             d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
                           />
                         </svg>
-                        <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
-                          1
-                        </span>
+                        {unreadCount > 0 && (
+                          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                          </span>
+                        )}
                       </button>
 
                       {notificationsOpen && (
                         <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-md shadow-lg overflow-hidden z-50">
-                          <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                          <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                             <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Notifications</h3>
+                            {unreadCount > 0 && (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await supabase
+                                      .from('notifications')
+                                      .update({ is_read: true })
+                                      .eq('user_id', user?.id)
+                                      .eq('is_read', false);
+                                    setUnreadCount(0);
+                                  } catch (error) {
+                                    console.error('Error marking notifications as read:', error);
+                                  }
+                                }}
+                                className="text-xs text-primary-500 hover:text-primary-600"
+                              >
+                                Mark all as read
+                              </button>
+                            )}
                           </div>
-                          <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                            You have a new notification!
-                          </div>
+
+                          {loadingNotifications ? (
+                            <div className="p-4 text-center">
+                              <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500"></div>
+                            </div>
+                          ) : notifications.length > 0 ? (
+                            <div className="max-h-96 overflow-y-auto">
+                              {notifications.map((notification) => (
+                                <div
+                                  key={notification.id}
+                                  onClick={() => {
+                                    if (!notification.is_read) {
+                                      markNotificationAsRead(notification.id);
+                                    }
+
+                                    // If there's a related task, navigate to it
+                                    if (notification.related_task_id) {
+                                      router.push(`/tasks?id=${notification.related_task_id}`);
+                                      setNotificationsOpen(false);
+                                    }
+                                  }}
+                                  className={`p-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 ${
+                                    !notification.is_read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                                  } cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700`}
+                                >
+                                  <div className="flex justify-between">
+                                    <h4 className="font-medium text-gray-800 dark:text-gray-200">{notification.title}</h4>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      {new Date(notification.created_at).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{notification.message}</p>
+                                  {!notification.is_read && (
+                                    <div className="mt-2 flex justify-end">
+                                      <span className="inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                              No notifications yet
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -263,19 +413,82 @@ const Layout = ({ children }: LayoutProps) => {
                             d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
                           />
                         </svg>
-                        <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
-                          1
-                        </span>
+                        {unreadCount > 0 && (
+                          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                          </span>
+                        )}
                       </button>
 
                       {notificationsOpen && (
                         <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-md shadow-lg overflow-hidden z-50">
-                          <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                          <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                             <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Notifications</h3>
+                            {unreadCount > 0 && (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await supabase
+                                      .from('notifications')
+                                      .update({ is_read: true })
+                                      .eq('user_id', user?.id)
+                                      .eq('is_read', false);
+                                    setUnreadCount(0);
+                                  } catch (error) {
+                                    console.error('Error marking notifications as read:', error);
+                                  }
+                                }}
+                                className="text-xs text-primary-500 hover:text-primary-600"
+                              >
+                                Mark all as read
+                              </button>
+                            )}
                           </div>
-                          <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                            You have a new notification!
-                          </div>
+
+                          {loadingNotifications ? (
+                            <div className="p-4 text-center">
+                              <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500"></div>
+                            </div>
+                          ) : notifications.length > 0 ? (
+                            <div className="max-h-96 overflow-y-auto">
+                              {notifications.map((notification) => (
+                                <div
+                                  key={notification.id}
+                                  onClick={() => {
+                                    if (!notification.is_read) {
+                                      markNotificationAsRead(notification.id);
+                                    }
+
+                                    // If there's a related task, navigate to it
+                                    if (notification.related_task_id) {
+                                      router.push(`/tasks?id=${notification.related_task_id}`);
+                                      setNotificationsOpen(false);
+                                    }
+                                  }}
+                                  className={`p-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 ${
+                                    !notification.is_read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                                  } cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700`}
+                                >
+                                  <div className="flex justify-between">
+                                    <h4 className="font-medium text-gray-800 dark:text-gray-200">{notification.title}</h4>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      {new Date(notification.created_at).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{notification.message}</p>
+                                  {!notification.is_read && (
+                                    <div className="mt-2 flex justify-end">
+                                      <span className="inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                              No notifications yet
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
