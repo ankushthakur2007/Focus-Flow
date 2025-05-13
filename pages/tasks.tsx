@@ -18,8 +18,11 @@ const TasksPage = () => {
 
   useEffect(() => {
     if (!user) return;
+    
+    let isMounted = true;
 
     const fetchTasks = async () => {
+      if (!isMounted) return;
       setLoading(true);
 
       try {
@@ -38,15 +41,20 @@ const TasksPage = () => {
           throw error;
         }
 
-        setTasks(data || []);
+        if (isMounted) {
+          setTasks(data || []);
+        }
       } catch (error) {
         console.error('Error fetching tasks:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     const fetchSharedTasks = async () => {
+      if (!isMounted) return;
       setLoading(true);
 
       try {
@@ -58,11 +66,15 @@ const TasksPage = () => {
           filteredTasks = sharedTasksData.filter(task => task.status === filter);
         }
 
-        setSharedTasks(filteredTasks);
+        if (isMounted) {
+          setSharedTasks(filteredTasks);
+        }
       } catch (error) {
         console.error('Error fetching shared tasks:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -84,7 +96,7 @@ const TasksPage = () => {
           filter: `user_id=eq.${user.id}`
         },
         () => {
-          if (view === 'my') {
+          if (view === 'my' && isMounted) {
             fetchTasks();
           }
         }
@@ -102,7 +114,7 @@ const TasksPage = () => {
           filter: `shared_with_id=eq.${user.id}`
         },
         () => {
-          if (view === 'shared') {
+          if (view === 'shared' && isMounted) {
             fetchSharedTasks();
           }
         }
@@ -110,6 +122,7 @@ const TasksPage = () => {
       .subscribe();
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
       sharesSubscription.unsubscribe();
     };
