@@ -19,6 +19,7 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
   // Each recommendation manages its own expanded state
   const [expanded, setExpanded] = useState<boolean>(false);
   const { user } = useContext(AuthContext);
+  const [taskOwnerId, setTaskOwnerId] = useState<string | null>(null);
 
   const fetchRecommendation = async () => {
     let isMounted = true;
@@ -42,6 +43,13 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
         return;
       }
 
+      if (isMounted) {
+        setTaskOwnerId(taskData.user_id);
+      }
+
+      console.log('Task owner ID:', taskData.user_id);
+      console.log('Current user ID:', user?.id);
+
       // Get the recommendation
       const { data, error } = await supabase
         .from('recommendations')
@@ -60,6 +68,7 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
       }
 
       if (data && data.length > 0 && isMounted) {
+        console.log('Found recommendation:', data[0]);
         setRecommendation(data[0] as Recommendation);
         setLoading(false);
       } else {
@@ -87,8 +96,13 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
             setRecommendation(sharedData[0] as Recommendation);
             setLoading(false);
           } else if (isMounted) {
-            // No recommendation found, try to generate one
-            await generateNewRecommendation(taskData);
+            // No recommendation found, try to generate one if user is the task owner
+            if (user && user.id === taskData.user_id) {
+              await generateNewRecommendation(taskData);
+            } else {
+              setLoading(false);
+              setError('No recommendation available for this shared task');
+            }
           }
         }
       }
@@ -221,6 +235,7 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
         }
 
         if (shareData && isMounted) {
+          console.log('Found share data with permission level:', shareData.permission_level);
           setIsSharedTask(true);
           setPermissionLevel(shareData.permission_level);
         }
@@ -250,6 +265,12 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
       if (taskError) {
         console.error('Error fetching task for regeneration:', taskError);
         setError('Could not fetch task details');
+        return;
+      }
+
+      // Only allow regeneration if user is the task owner
+      if (taskData.user_id !== user.id) {
+        setError('Only the task owner can regenerate recommendations');
         return;
       }
 
@@ -287,14 +308,16 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
     return (
       <div className="text-sm text-gray-500 py-2">
         <div>Error: {error}</div>
-        <div className="mt-2">
-          <button 
-            onClick={handleRegenerateRecommendation}
-            className="text-xs text-primary-600 hover:text-primary-800 flex items-center"
-          >
-            Try again
-          </button>
-        </div>
+        {user && taskOwnerId === user.id && (
+          <div className="mt-2">
+            <button 
+              onClick={handleRegenerateRecommendation}
+              className="text-xs text-primary-600 hover:text-primary-800 flex items-center"
+            >
+              Try again
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -315,14 +338,16 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
     return (
       <div className="text-sm text-gray-500 py-2">
         <div>No AI insights available for this task yet.</div>
-        <div className="mt-2 flex items-center">
-          <button 
-            onClick={handleRegenerateRecommendation}
-            className="text-xs text-primary-600 hover:text-primary-800 flex items-center"
-          >
-            Generate insights
-          </button>
-        </div>
+        {user && taskOwnerId === user.id && (
+          <div className="mt-2 flex items-center">
+            <button 
+              onClick={handleRegenerateRecommendation}
+              className="text-xs text-primary-600 hover:text-primary-800 flex items-center"
+            >
+              Generate insights
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -335,15 +360,17 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
           AI Insights
         </h4>
         <div className="flex items-center space-x-2">
-          <button
-            onClick={handleRegenerateRecommendation}
-            className="text-xs text-primary-600 hover:text-primary-800 flex items-center"
-            title="Regenerate insights"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
+          {user && taskOwnerId === user.id && (
+            <button
+              onClick={handleRegenerateRecommendation}
+              className="text-xs text-primary-600 hover:text-primary-800 flex items-center"
+              title="Regenerate insights"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          )}
           <button
             onClick={() => setExpanded(!expanded)}
             className="text-xs text-primary-600 hover:text-primary-800 flex items-center"
