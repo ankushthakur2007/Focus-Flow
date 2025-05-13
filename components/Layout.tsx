@@ -6,6 +6,7 @@ import AuthContext from './AuthContext';
 import ThemeToggle from './ThemeToggle';
 import KeyboardShortcutsHelp from './KeyboardShortcutsHelp';
 import Footer from './Footer';
+import NotificationBell from './NotificationBell';
 
 interface LayoutProps {
   children: ReactNode;
@@ -119,8 +120,9 @@ const Layout = ({ children }: LayoutProps) => {
                     </Link>
                   </div>
 
-                  {/* Theme Toggle (Mobile) */}
-                  <div className="md:hidden flex items-center">
+                  {/* Theme Toggle and Notification Bell (Mobile) */}
+                  <div className="md:hidden flex items-center space-x-2">
+                    <NotificationBell />
                     <ThemeToggle />
                   </div>
 
@@ -189,8 +191,9 @@ const Layout = ({ children }: LayoutProps) => {
                     </Link>
                   </nav>
 
-                  {/* Desktop Theme Toggle */}
-                  <div className="hidden md:flex items-center mr-4">
+                  {/* Desktop Theme Toggle and Notification Bell */}
+                  <div className="hidden md:flex items-center space-x-2 mr-4">
+                    <NotificationBell />
                     <ThemeToggle />
                   </div>
 
