@@ -15,6 +15,8 @@ const TaskRecommendation = ({ taskId }: TaskRecommendationProps) => {
   const [expanded, setExpanded] = useState<boolean>(false);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchRecommendation = async () => {
       setLoading(true);
       try {
@@ -43,7 +45,7 @@ const TaskRecommendation = ({ taskId }: TaskRecommendationProps) => {
           throw error;
         }
 
-        if (data && data.length > 0) {
+        if (data && data.length > 0 && isMounted) {
           setRecommendation(data[0] as Recommendation);
         } else {
           // If no recommendation found, check if this is a shared task
@@ -61,7 +63,7 @@ const TaskRecommendation = ({ taskId }: TaskRecommendationProps) => {
 
             if (sharedError) {
               console.error('Error fetching shared recommendation:', sharedError);
-            } else if (sharedData && sharedData.length > 0) {
+            } else if (sharedData && sharedData.length > 0 && isMounted) {
               console.log('Found recommendation for shared task:', sharedData[0]);
               setRecommendation(sharedData[0] as Recommendation);
             }
@@ -70,11 +72,18 @@ const TaskRecommendation = ({ taskId }: TaskRecommendationProps) => {
       } catch (error) {
         console.error('Error in recommendation flow:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchRecommendation();
+    
+    // Cleanup function to prevent state updates after unmounting
+    return () => {
+      isMounted = false;
+    };
   }, [taskId]);
 
   if (loading) {
@@ -95,6 +104,8 @@ const TaskRecommendation = ({ taskId }: TaskRecommendationProps) => {
   const [isSharedTask, setIsSharedTask] = useState<boolean>(false);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const checkPermission = async () => {
       if (!user || !taskId) return;
 
@@ -113,7 +124,9 @@ const TaskRecommendation = ({ taskId }: TaskRecommendationProps) => {
 
         // If the user is the task owner, they have full access
         if (taskData.user_id === user.id) {
-          setPermissionLevel('admin');
+          if (isMounted) {
+            setPermissionLevel('admin');
+          }
           return;
         }
 
@@ -131,7 +144,7 @@ const TaskRecommendation = ({ taskId }: TaskRecommendationProps) => {
           return;
         }
 
-        if (shareData) {
+        if (shareData && isMounted) {
           setIsSharedTask(true);
           setPermissionLevel(shareData.permission_level);
         }
@@ -141,6 +154,11 @@ const TaskRecommendation = ({ taskId }: TaskRecommendationProps) => {
     };
 
     checkPermission();
+    
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
   }, [user, taskId]);
 
   // If this is a shared task with non-admin permission, show a message
