@@ -60,6 +60,10 @@ const Layout = ({ children }: LayoutProps) => {
           // Go to Tasks
           router.push('/tasks');
           keysPressed = {};
+        } else if (keysPressed['c'] || keysPressed['C']) {
+          // Go to Calendar
+          router.push('/calendar');
+          keysPressed = {};
         } else if (keysPressed['m'] || keysPressed['M']) {
           // Go to Mood
           router.push('/mood');
@@ -131,6 +135,17 @@ const Layout = ({ children }: LayoutProps) => {
                       }`}
                     >
                       Tasks
+                    </Link>
+                    {/* Calendar Navigation Link */}
+                    <Link
+                      href="/calendar"
+                      className={`px-3 py-2 rounded-md text-sm font-medium ${
+                        isActive('/calendar')
+                          ? 'bg-primary-500 text-white'
+                          : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      Calendar
                     </Link>
                     <Link
                       href="/mood"
@@ -223,6 +238,18 @@ const Layout = ({ children }: LayoutProps) => {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Tasks
+                  </Link>
+                  {/* Calendar Mobile Navigation Link */}
+                  <Link
+                    href="/calendar"
+                    className={`px-3 py-3 rounded-md text-sm font-medium ${
+                      isActive('/calendar')
+                        ? 'bg-primary-500 text-white'
+                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Calendar
                   </Link>
                   <Link
                     href="/mood"
