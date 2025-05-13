@@ -2,7 +2,6 @@ import { useState, useContext } from 'react';
 import { Task } from '../types/task';
 import { format, parseISO } from 'date-fns';
 import TaskRecommendation from './TaskRecommendation';
-import TaskToCalendarModal from './TaskToCalendarModal';
 import AuthContext from './AuthContext';
 
 interface TaskCardProps {
@@ -14,7 +13,6 @@ interface TaskCardProps {
 const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
   // Each card has its own expanded state
   const [expanded, setExpanded] = useState(false);
-  const [showCalendarModal, setShowCalendarModal] = useState(false);
   const { user } = useContext(AuthContext);
 
   const getPriorityColor = (priority: string) => {
@@ -54,7 +52,7 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
       case 'health':
         return '❤️';
       case 'social':
-        return '��';
+        return '👥';
       default:
         return '📋';
     }
@@ -160,26 +158,6 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
           </div>
 
           <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
-            <button
-              onClick={() => setShowCalendarModal(true)}
-              className="text-blue-500 hover:text-blue-700 dark:hover:text-blue-400 flex items-center px-3 py-1 rounded-md hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors"
-              title="Schedule to calendar"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 mr-1"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <span className="hidden sm:inline">Schedule</span>
-            </button>
-
             <a
               href={`/chat/${task.id}`}
               className="text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 flex items-center px-3 py-1 rounded-md hover:bg-primary-50 dark:hover:bg-gray-700 transition-colors"
@@ -222,19 +200,6 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
           </div>
         </div>
       </div>
-
-      {/* Calendar Modal */}
-      {showCalendarModal && user && (
-        <TaskToCalendarModal
-          task={task}
-          userId={user.id}
-          onClose={() => setShowCalendarModal(false)}
-          onSuccess={() => {
-            setShowCalendarModal(false);
-            // You could show a success message here
-          }}
-        />
-      )}
     </div>
   );
 };
