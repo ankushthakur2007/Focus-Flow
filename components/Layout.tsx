@@ -1,4 +1,4 @@
-import { ReactNode, useContext, useState, useEffect } from 'react';
+import { ReactNode, useContext, useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -16,6 +16,8 @@ const Layout = ({ children }: LayoutProps) => {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationRef = useRef<HTMLDivElement>(null);
 
   // Handle scroll effect for header
   useEffect(() => {
@@ -25,6 +27,20 @@ const Layout = ({ children }: LayoutProps) => {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Handle click outside to close notification dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setNotificationsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   // Add keyboard shortcuts for navigation
@@ -119,8 +135,44 @@ const Layout = ({ children }: LayoutProps) => {
                     </Link>
                   </div>
 
-                  {/* Theme Toggle (Mobile) */}
-                  <div className="md:hidden flex items-center">
+                  {/* Theme Toggle and Notification Bell (Mobile) */}
+                  <div className="md:hidden flex items-center space-x-4">
+                    <div className="relative" ref={notificationRef}>
+                      <button
+                        onClick={() => setNotificationsOpen(!notificationsOpen)}
+                        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative"
+                        aria-label="Notifications"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6 text-gray-700 dark:text-gray-200"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                          />
+                        </svg>
+                        <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
+                          1
+                        </span>
+                      </button>
+
+                      {notificationsOpen && (
+                        <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-md shadow-lg overflow-hidden z-50">
+                          <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Notifications</h3>
+                          </div>
+                          <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                            You have a new notification!
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <ThemeToggle />
                   </div>
 
@@ -189,8 +241,44 @@ const Layout = ({ children }: LayoutProps) => {
                     </Link>
                   </nav>
 
-                  {/* Desktop Theme Toggle */}
-                  <div className="hidden md:flex items-center mr-4">
+                  {/* Desktop Theme Toggle and Notification Bell */}
+                  <div className="hidden md:flex items-center space-x-4 mr-4">
+                    <div className="relative" ref={notificationRef}>
+                      <button
+                        onClick={() => setNotificationsOpen(!notificationsOpen)}
+                        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative"
+                        aria-label="Notifications"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6 text-gray-700 dark:text-gray-200"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                          />
+                        </svg>
+                        <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
+                          1
+                        </span>
+                      </button>
+
+                      {notificationsOpen && (
+                        <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-md shadow-lg overflow-hidden z-50">
+                          <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Notifications</h3>
+                          </div>
+                          <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                            You have a new notification!
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <ThemeToggle />
                   </div>
 
