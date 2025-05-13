@@ -5,13 +5,10 @@ import TaskCard from '../components/TaskCard';
 import TaskForm from '../components/TaskForm';
 import { Task } from '../types/task';
 import { getTaskRecommendation } from '../services/gemini';
-import { getTasksSharedWithMe } from '../services/taskSharing';
 
 const TasksPage = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [sharedTasks, setSharedTasks] = useState<Task[]>([]);
   const [filter, setFilter] = useState<string>('all');
-  const [view, setView] = useState<'my' | 'shared'>('my');
   const [loading, setLoading] = useState<boolean>(true);
   const [showForm, setShowForm] = useState<boolean>(false);
   const { user } = useContext(AuthContext);
@@ -53,37 +50,7 @@ const TasksPage = () => {
       }
     };
 
-    const fetchSharedTasks = async () => {
-      if (!isMounted) return;
-      setLoading(true);
-
-      try {
-        const sharedTasksData = await getTasksSharedWithMe();
-
-        // Apply filter if needed
-        let filteredTasks = sharedTasksData;
-        if (filter !== 'all') {
-          filteredTasks = sharedTasksData.filter(task => task.status === filter);
-        }
-
-        if (isMounted) {
-          setSharedTasks(filteredTasks);
-        }
-      } catch (error) {
-        console.error('Error fetching shared tasks:', error);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    // Fetch the appropriate tasks based on the current view
-    if (view === 'my') {
-      fetchTasks();
-    } else {
-      fetchSharedTasks();
-    }
+    fetchTasks();
 
     // Set up realtime subscription for my tasks
     const subscription = supabase
@@ -96,26 +63,8 @@ const TasksPage = () => {
           filter: `user_id=eq.${user.id}`
         },
         () => {
-          if (view === 'my' && isMounted) {
+          if (isMounted) {
             fetchTasks();
-          }
-        }
-      )
-      .subscribe();
-
-    // Set up realtime subscription for task_shares
-    const sharesSubscription = supabase
-      .channel('public:task_shares')
-      .on('postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'task_shares',
-          filter: `shared_with_id=eq.${user.id}`
-        },
-        () => {
-          if (view === 'shared' && isMounted) {
-            fetchSharedTasks();
           }
         }
       )
@@ -124,9 +73,8 @@ const TasksPage = () => {
     return () => {
       isMounted = false;
       subscription.unsubscribe();
-      sharesSubscription.unsubscribe();
     };
-  }, [user, filter, view]);
+  }, [user, filter]);
 
   const handleStatusChange = async (taskId: string, newStatus: string) => {
     if (!user) return;
@@ -240,50 +188,24 @@ const TasksPage = () => {
     <div className="container mx-auto px-4 py-8 pb-20">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Tasks</h1>
-        {view === 'my' && (
-          <button
-            className="btn btn-primary w-full sm:w-auto"
-            onClick={() => setShowForm(!showForm)}
-          >
-            <span className="flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-              </svg>
-              {showForm ? 'Cancel' : 'Add Task'}
-            </span>
-          </button>
-        )}
+        <button
+          className="btn btn-primary w-full sm:w-auto"
+          onClick={() => setShowForm(!showForm)}
+        >
+          <span className="flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            {showForm ? 'Cancel' : 'Add Task'}
+          </span>
+        </button>
       </div>
 
-      {showForm && view === 'my' && (
+      {showForm && (
         <div className="mb-6">
           <TaskForm onSubmit={handleAddTask} onCancel={() => setShowForm(false)} />
         </div>
       )}
-
-      {/* View Toggle */}
-      <div className="flex mb-6 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-        <button
-          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            view === 'my'
-              ? 'bg-white dark:bg-gray-800 shadow-sm'
-              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-          }`}
-          onClick={() => setView('my')}
-        >
-          My Tasks
-        </button>
-        <button
-          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            view === 'shared'
-              ? 'bg-white dark:bg-gray-800 shadow-sm'
-              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-          }`}
-          onClick={() => setView('shared')}
-        >
-          Shared With Me
-        </button>
-      </div>
 
       {/* Status Filter */}
       <div className="flex flex-wrap gap-2 mb-6 overflow-x-auto pb-2">
@@ -325,65 +247,44 @@ const TasksPage = () => {
         <div className="flex justify-center py-8">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
         </div>
-      ) : (view === 'my' && tasks.length === 0) || (view === 'shared' && sharedTasks.length === 0) ? (
+      ) : tasks.length === 0 ? (
         <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
-          {view === 'my' ? (
-            <>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">No tasks found</p>
-              <button
-                className="btn btn-primary"
-                onClick={() => setShowForm(true)}
-              >
-                Create your first task
-              </button>
-            </>
-          ) : (
-            <p className="text-gray-500 dark:text-gray-400 mb-4">No tasks have been shared with you yet</p>
-          )}
+          <p className="text-gray-500 dark:text-gray-400 mb-4">No tasks found</p>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowForm(true)}
+          >
+            Create your first task
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {view === 'my' ? (
-            tasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onStatusChange={handleStatusChange}
-                onDelete={handleDeleteTask}
-              />
-            ))
-          ) : (
-            sharedTasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onStatusChange={handleStatusChange}
-                onDelete={handleDeleteTask}
-                isShared={true}
-                sharedBy={task.shared_by}
-              />
-            ))
-          )}
+          {tasks.map((task) => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              onStatusChange={handleStatusChange}
+              onDelete={handleDeleteTask}
+            />
+          ))}
         </div>
       )}
 
       {/* Fixed Add Button for Mobile */}
-      {view === 'my' && (
-        <div className="fixed bottom-6 right-6 md:hidden z-10">
-          <button
-            className="btn btn-primary rounded-full w-14 h-14 shadow-lg flex items-center justify-center"
-            onClick={() => setShowForm(true)}
-            aria-label="Add Task"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-          </button>
-        </div>
-      )}
+      <div className="fixed bottom-6 right-6 md:hidden z-10">
+        <button
+          className="btn btn-primary rounded-full w-14 h-14 shadow-lg flex items-center justify-center"
+          onClick={() => setShowForm(true)}
+          aria-label="Add Task"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 };
