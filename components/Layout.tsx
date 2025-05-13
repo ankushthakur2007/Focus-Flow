@@ -72,10 +72,6 @@ const Layout = ({ children }: LayoutProps) => {
           // Go to Analytics
           router.push('/analytics');
           keysPressed = {};
-        } else if (keysPressed['s'] || keysPressed['S']) {
-          // Go to Shared
-          router.push('/shared');
-          keysPressed = {};
         } else if (keysPressed['u'] || keysPressed['U']) {
           // Go to Profile (user)
           router.push('/profile');
@@ -165,16 +161,6 @@ const Layout = ({ children }: LayoutProps) => {
                       }`}
                     >
                       Analytics
-                    </Link>
-                    <Link
-                      href="/shared"
-                      className={`px-3 py-2 rounded-md text-sm font-medium ${
-                        isActive('/shared')
-                          ? 'bg-primary-500 text-white'
-                          : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      Shared
                     </Link>
                     <Link
                       href="/profile"
@@ -270,17 +256,6 @@ const Layout = ({ children }: LayoutProps) => {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Analytics
-                  </Link>
-                  <Link
-                    href="/shared"
-                    className={`px-3 py-3 rounded-md text-sm font-medium ${
-                      isActive('/shared')
-                        ? 'bg-primary-500 text-white'
-                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700'
-                    }`}
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Shared
                   </Link>
                   <Link
                     href="/profile"
