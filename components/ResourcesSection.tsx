@@ -68,47 +68,67 @@ const ResourcesSection: React.FC<ResourcesSectionProps> = ({
             </div>
           ) : (
             <>
-              {/* Videos Section */}
-              {videoResources.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-2 text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    Videos
-                  </h4>
-                  <div className="space-y-3">
-                    {videoResources.map((resource) => (
-                      <ResourceCard key={resource.id} resource={resource} />
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div className="mb-4">
+                <h4 className="font-medium mb-4 text-lg text-gray-700 dark:text-gray-300">
+                  Learning Resources
+                </h4>
 
-              {/* Articles Section */}
-              {articleResources.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-2 text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    Articles & Blogs
-                  </h4>
-                  <div className="space-y-3">
-                    {articleResources.map((resource) => (
-                      <ResourceCard key={resource.id} resource={resource} />
-                    ))}
+                {/* Videos Section */}
+                {videoResources.length > 0 && (
+                  <div className="mb-6">
+                    <h5 className="font-medium mb-3 text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 pb-2">
+                      Videos
+                    </h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {videoResources.map((resource) => (
+                        <ResourceCard key={resource.id} resource={resource} />
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Other Resources Section */}
-              {otherResources.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-2 text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    Other Resources
-                  </h4>
-                  <div className="space-y-3">
-                    {otherResources.map((resource) => (
-                      <ResourceCard key={resource.id} resource={resource} />
-                    ))}
+                {/* Blog Posts Section */}
+                {articleResources.filter(r => r.type === 'blog').length > 0 && (
+                  <div className="mb-6">
+                    <h5 className="font-medium mb-3 text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 pb-2">
+                      Blog Posts
+                    </h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {articleResources.filter(r => r.type === 'blog').map((resource) => (
+                        <ResourceCard key={resource.id} resource={resource} />
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+
+                {/* Articles Section */}
+                {articleResources.filter(r => r.type === 'article').length > 0 && (
+                  <div className="mb-6">
+                    <h5 className="font-medium mb-3 text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 pb-2">
+                      Articles
+                    </h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {articleResources.filter(r => r.type === 'article').map((resource) => (
+                        <ResourceCard key={resource.id} resource={resource} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Other Resources Section */}
+                {otherResources.length > 0 && (
+                  <div className="mb-6">
+                    <h5 className="font-medium mb-3 text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 pb-2">
+                      Other Resources
+                    </h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {otherResources.map((resource) => (
+                        <ResourceCard key={resource.id} resource={resource} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Refresh Button */}
               {onRefresh && (
@@ -134,38 +154,90 @@ interface ResourceCardProps {
 }
 
 const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
+  const [expanded, setExpanded] = useState(false);
+
   return (
-    <a
-      href={resource.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-    >
-      <div className="flex items-start space-x-3">
-        {resource.thumbnail_url && (
-          <div className="flex-shrink-0">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+      {/* Card Header - Always visible */}
+      <div
+        className="cursor-pointer"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="aspect-square relative overflow-hidden bg-gray-100 dark:bg-gray-800">
+          {resource.thumbnail_url ? (
             <img
               src={resource.thumbnail_url}
               alt={resource.title}
-              className="w-16 h-12 object-cover rounded"
+              className="w-full h-full object-cover"
             />
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <h5 className="font-medium text-gray-900 dark:text-gray-100 truncate">
-            {resource.title}
-          </h5>
-          {resource.description && (
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
-              {resource.description}
-            </p>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-primary-50 dark:bg-primary-900/20">
+              <span className="text-4xl">
+                {resource.type === 'video' ? '🎬' : resource.type === 'blog' ? '📝' : '📄'}
+              </span>
+            </div>
           )}
-          <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate">
-            {new URL(resource.url).hostname}
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+            <h5 className="font-medium text-white truncate">
+              {resource.title}
+            </h5>
+            <div className="text-xs text-gray-200 truncate">
+              {new URL(resource.url).hostname}
+            </div>
           </div>
         </div>
       </div>
-    </a>
+
+      {/* Expanded Content */}
+      {expanded && (
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="mb-3">
+            <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+              {resource.title}
+            </h6>
+            {resource.description && (
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                {resource.description}
+              </p>
+            )}
+          </div>
+
+          {/* Resource Type Section */}
+          <div className="mb-3">
+            <div className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+              Type
+            </div>
+            <div className="flex items-center">
+              <span className="mr-2">
+                {resource.type === 'video' ? '🎬' : resource.type === 'blog' ? '📝' : '📄'}
+              </span>
+              <span className="text-sm capitalize">
+                {resource.type}
+              </span>
+            </div>
+          </div>
+
+          {/* Source Section */}
+          <div className="mb-4">
+            <div className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+              Source
+            </div>
+            <div className="text-sm">
+              {new URL(resource.url).hostname}
+            </div>
+          </div>
+
+          <a
+            href={resource.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-4 py-2 bg-primary-600 text-white text-sm rounded hover:bg-primary-700 transition-colors"
+          >
+            Visit Resource
+          </a>
+        </div>
+      )}
+    </div>
   );
 };
 
