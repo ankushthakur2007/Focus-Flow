@@ -14,8 +14,20 @@ interface TaskBreakdownModalProps {
 const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps) => {
   const { user } = useContext(AuthContext);
   const [steps, setSteps] = useState<TaskStep[]>([]);
+  const [tempSteps, setTempSteps] = useState<{
+    title: string;
+    description: string;
+    is_completed: boolean;
+    order_index: number;
+    id?: string; // For existing steps
+    isNew?: boolean; // Flag for newly added steps
+  }[]>([]);
+  const [modifiedStepIds, setModifiedStepIds] = useState<Set<string>>(new Set());
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [newStepTitle, setNewStepTitle] = useState('');
   const [newStepDescription, setNewStepDescription] = useState('');
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
@@ -41,6 +53,20 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
         if (error) throw error;
 
         setSteps(data || []);
+
+        // Initialize tempSteps with the fetched steps
+        const initialTempSteps = (data || []).map(step => ({
+          id: step.id,
+          title: step.title,
+          description: step.description || '',
+          is_completed: step.is_completed,
+          order_index: step.order_index,
+          isNew: false
+        }));
+
+        setTempSteps(initialTempSteps);
+        setHasUnsavedChanges(false);
+        setModifiedStepIds(new Set());
       } catch (err: any) {
         console.error('Error fetching task steps:', err);
         setError(err.message);
@@ -52,8 +78,8 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
     fetchSteps();
   }, [task.id, user]);
 
-  // Handle adding a new step manually
-  const handleAddStep = async () => {
+  // Handle adding a new step manually (to temporary state only)
+  const handleAddStep = () => {
     if (!newStepTitle.trim()) {
       setError('Step title cannot be empty');
       return;
@@ -64,91 +90,74 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
       return;
     }
 
-    try {
-      const newStep = {
-        task_id: task.id,
-        user_id: user.id,
-        title: newStepTitle.trim(),
-        description: newStepDescription.trim(),
-        is_completed: false,
-        order_index: steps.length
-      };
+    // Create a new temporary step
+    const newTempStep = {
+      title: newStepTitle.trim(),
+      description: newStepDescription.trim(),
+      is_completed: false,
+      order_index: tempSteps.length,
+      isNew: true
+    };
 
-      const { data, error } = await supabase
-        .from('task_steps')
-        .insert([newStep])
-        .select();
+    // Add to temporary steps
+    setTempSteps([...tempSteps, newTempStep]);
 
-      if (error) throw error;
+    // Clear input fields
+    setNewStepTitle('');
+    setNewStepDescription('');
 
-      setSteps([...steps, data[0]]);
-      setNewStepTitle('');
-      setNewStepDescription('');
-      onUpdate();
-    } catch (err: any) {
-      console.error('Error adding step:', err);
-      setError(err.message);
-    }
+    // Set flag for unsaved changes
+    setHasUnsavedChanges(true);
+
+    // Show success message
+    setSuccessMessage('Step added. Remember to save your changes.');
+
+    // Clear success message after 3 seconds
+    setTimeout(() => {
+      setSuccessMessage(null);
+    }, 3000);
   };
 
-  // Handle toggling step completion
-  const handleToggleStep = async (stepId: string, isCompleted: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('task_steps')
-        .update({ is_completed: !isCompleted, updated_at: new Date().toISOString() })
-        .eq('id', stepId);
+  // Handle toggling step completion (in temporary state only)
+  const handleToggleStep = (stepId: string, isCompleted: boolean) => {
+    // Update tempSteps
+    setTempSteps(tempSteps.map(step =>
+      step.id === stepId ? { ...step, is_completed: !isCompleted } : step
+    ));
 
-      if (error) throw error;
+    // Add to modified steps set
+    const newModifiedStepIds = new Set(modifiedStepIds);
+    newModifiedStepIds.add(stepId);
+    setModifiedStepIds(newModifiedStepIds);
 
-      // Update local state
-      setSteps(steps.map(step =>
-        step.id === stepId ? { ...step, is_completed: !isCompleted } : step
-      ));
-
-      // Force refresh task progress
-      const { error: refreshError } = await supabase
-        .rpc('refresh_task_progress', { task_id_param: task.id });
-
-      if (refreshError) {
-        console.error('Error refreshing task progress:', refreshError);
-      }
-
-      // Notify parent component
-      onUpdate();
-    } catch (err: any) {
-      console.error('Error toggling step completion:', err);
-      setError(err.message);
-    }
+    // Set flag for unsaved changes
+    setHasUnsavedChanges(true);
   };
 
-  // Handle deleting a step
-  const handleDeleteStep = async (stepId: string) => {
-    try {
-      const { error } = await supabase
-        .from('task_steps')
-        .delete()
-        .eq('id', stepId);
+  // Handle deleting a step (from temporary state only)
+  const handleDeleteStep = (stepId: string) => {
+    // Remove from tempSteps
+    setTempSteps(tempSteps.filter(step => step.id !== stepId));
 
-      if (error) throw error;
-
-      // Update local state
-      setSteps(steps.filter(step => step.id !== stepId));
-
-      // Force refresh task progress
-      const { error: refreshError } = await supabase
-        .rpc('refresh_task_progress', { task_id_param: task.id });
-
-      if (refreshError) {
-        console.error('Error refreshing task progress:', refreshError);
-      }
-
-      // Notify parent component
-      onUpdate();
-    } catch (err: any) {
-      console.error('Error deleting step:', err);
-      setError(err.message);
+    // If it's an existing step (not a new one), add to modified steps
+    const stepToDelete = tempSteps.find(step => step.id === stepId);
+    if (stepToDelete && !stepToDelete.isNew) {
+      // We'll handle actual deletion when saving changes
+      const newModifiedStepIds = new Set(modifiedStepIds);
+      newModifiedStepIds.add(stepId);
+      setModifiedStepIds(newModifiedStepIds);
     }
+
+    // Set flag for unsaved changes
+    setHasUnsavedChanges(true);
+
+    // Show success message
+    setSuccessMessage('Step removed. Remember to save your changes.');
+
+    // Clear success message after 3 seconds
+    setTimeout(() => {
+      setSuccessMessage(null);
+    }, 3000);
   };
 
   // Start AI step generation process
@@ -247,33 +256,26 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
     }
 
     try {
-      const newSteps = aiGeneratedSteps.map((step, index) => ({
-        task_id: task.id,
-        user_id: user.id,
-        title: step.title,
-        description: step.description || '',
-        is_completed: false,
-        order_index: steps.length + index
-      }));
+      setIsSaving(true);
 
-      const { data, error } = await supabase
-        .from('task_steps')
-        .insert(newSteps)
-        .select();
+      // Add AI-generated steps to tempSteps
+      const newTempSteps = [
+        ...tempSteps,
+        ...aiGeneratedSteps.map((step, index) => ({
+          title: step.title,
+          description: step.description || '',
+          is_completed: false,
+          order_index: tempSteps.length + index,
+          isNew: true
+        }))
+      ];
 
-      if (error) throw error;
-
-      // Update local state
-      setSteps([...steps, ...data]);
+      setTempSteps(newTempSteps);
       setShowAIResults(false);
+      setHasUnsavedChanges(true);
 
-      // Force refresh task progress
-      const { error: refreshError } = await supabase
-        .rpc('refresh_task_progress', { task_id_param: task.id });
-
-      if (refreshError) {
-        console.error('Error refreshing task progress:', refreshError);
-      }
+      // Save changes to database
+      await saveChanges();
 
       // Mark steps as finalized
       const { error: finalizeError } = await supabase
@@ -286,9 +288,18 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
 
       if (finalizeError) {
         console.error('Error finalizing steps:', finalizeError);
+        setError('Error finalizing steps: ' + finalizeError.message);
       } else {
         // Update the local task state
         task.steps_finalized = true;
+
+        // Show success message
+        setSuccessMessage('AI-generated steps saved and finalized successfully!');
+
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 3000);
       }
 
       // Notify parent component
@@ -296,6 +307,8 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
     } catch (err: any) {
       console.error('Error saving AI steps:', err);
       setError(err.message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -305,11 +318,130 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
     setShowAIResults(false);
   };
 
+  // Save all changes to the database
+  const saveChanges = async () => {
+    if (!user) {
+      setError('User not authenticated. Please sign in to use this feature.');
+      return;
+    }
+
+    if (!hasUnsavedChanges) {
+      return; // Nothing to save
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      // 1. Add new steps
+      const newSteps = tempSteps.filter(step => step.isNew).map(step => ({
+        task_id: task.id,
+        user_id: user.id,
+        title: step.title,
+        description: step.description,
+        is_completed: step.is_completed,
+        order_index: step.order_index
+      }));
+
+      if (newSteps.length > 0) {
+        const { error: insertError } = await supabase
+          .from('task_steps')
+          .insert(newSteps);
+
+        if (insertError) throw insertError;
+      }
+
+      // 2. Update modified steps
+      for (const stepId of modifiedStepIds) {
+        // Check if the step still exists in tempSteps
+        const stepToUpdate = tempSteps.find(step => step.id === stepId);
+
+        if (stepToUpdate) {
+          // Update the step
+          const { error: updateError } = await supabase
+            .from('task_steps')
+            .update({
+              title: stepToUpdate.title,
+              description: stepToUpdate.description,
+              is_completed: stepToUpdate.is_completed,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', stepId);
+
+          if (updateError) throw updateError;
+        } else {
+          // Step was deleted
+          const { error: deleteError } = await supabase
+            .from('task_steps')
+            .delete()
+            .eq('id', stepId);
+
+          if (deleteError) throw deleteError;
+        }
+      }
+
+      // 3. Refresh task progress
+      const { error: refreshError } = await supabase
+        .rpc('refresh_task_progress', { task_id_param: task.id });
+
+      if (refreshError) {
+        console.error('Error refreshing task progress:', refreshError);
+      }
+
+      // 4. Fetch updated steps
+      const { data: updatedSteps, error: fetchError } = await supabase
+        .from('task_steps')
+        .select('*')
+        .eq('task_id', task.id)
+        .order('order_index', { ascending: true });
+
+      if (fetchError) throw fetchError;
+
+      // 5. Update local state
+      setSteps(updatedSteps || []);
+
+      // Initialize tempSteps with the fetched steps
+      const initialTempSteps = (updatedSteps || []).map(step => ({
+        id: step.id,
+        title: step.title,
+        description: step.description || '',
+        is_completed: step.is_completed,
+        order_index: step.order_index,
+        isNew: false
+      }));
+
+      setTempSteps(initialTempSteps);
+      setHasUnsavedChanges(false);
+      setModifiedStepIds(new Set());
+
+      // 6. Notify parent component
+      onUpdate();
+
+      // 7. Show success message
+      setSuccessMessage('Changes saved successfully!');
+
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
+    } catch (err: any) {
+      console.error('Error saving changes:', err);
+      setError(err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Finalize steps for this task
   const finalizeSteps = async () => {
     if (!user) {
       setError('User not authenticated. Please sign in to use this feature.');
       return;
+    }
+
+    // First save any unsaved changes
+    if (hasUnsavedChanges) {
+      await saveChanges();
     }
 
     try {
@@ -331,7 +463,12 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
       onUpdate();
 
       // Show success message
-      setError(null);
+      setSuccessMessage('Steps finalized successfully!');
+
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
     } catch (err: any) {
       console.error('Error finalizing steps:', err);
       setError(err.message);
@@ -361,6 +498,25 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
             </div>
           )}
 
+          {successMessage && (
+            <div className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 p-3 rounded-md mb-4">
+              {successMessage}
+            </div>
+          )}
+
+          {hasUnsavedChanges && (
+            <div className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-200 p-3 rounded-md mb-4 flex items-center justify-between">
+              <span>You have unsaved changes</span>
+              <TouchFriendlyButton
+                onClick={saveChanges}
+                disabled={isSaving}
+                className="px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 disabled:opacity-50 text-sm"
+              >
+                {isSaving ? 'Saving...' : 'Save Progress'}
+              </TouchFriendlyButton>
+            </div>
+          )}
+
           {/* Task Progress */}
           <div className="mb-6">
             <div className="flex justify-between items-center mb-2">
@@ -384,24 +540,25 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
               <div className="flex justify-center py-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500"></div>
               </div>
-            ) : steps.length === 0 ? (
+            ) : tempSteps.length === 0 ? (
               <div className="text-center py-4 text-gray-500 dark:text-gray-400">
                 No steps yet. Add steps below or generate with AI.
               </div>
             ) : (
               <ul className="space-y-2">
-                {steps.map((step) => (
-                  <li key={step.id} className="border border-gray-200 dark:border-gray-700 rounded-md p-3">
+                {tempSteps.map((step, index) => (
+                  <li key={step.id || `new-${index}`} className={`border rounded-md p-3 ${step.isNew ? 'border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-gray-700'}`}>
                     <div className="flex items-start gap-3">
                       <input
                         type="checkbox"
                         checked={step.is_completed}
-                        onChange={() => handleToggleStep(step.id, step.is_completed)}
+                        onChange={() => step.id ? handleToggleStep(step.id, step.is_completed) : null}
                         className="mt-1 h-4 w-4 text-primary-600 rounded"
                       />
                       <div className="flex-grow">
                         <h4 className={`font-medium ${step.is_completed ? 'line-through text-gray-500 dark:text-gray-400' : ''}`}>
                           {step.title}
+                          {step.isNew && <span className="ml-2 text-xs text-green-600 dark:text-green-400 font-normal">(New)</span>}
                         </h4>
                         {step.description && (
                           <p className={`text-sm mt-1 ${step.is_completed ? 'text-gray-500 dark:text-gray-400' : 'text-gray-600 dark:text-gray-300'}`}>
@@ -410,7 +567,7 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
                         )}
                       </div>
                       <button
-                        onClick={() => handleDeleteStep(step.id)}
+                        onClick={() => step.id ? handleDeleteStep(step.id) : handleDeleteStep(`new-${index}`)}
                         className="text-red-500 hover:text-red-700 dark:hover:text-red-400"
                         aria-label="Delete step"
                       >
@@ -569,18 +726,28 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
               <div className="flex justify-end gap-2">
                 <TouchFriendlyButton
                   onClick={handleAddStep}
-                  disabled={!newStepTitle.trim()}
+                  disabled={!newStepTitle.trim() || isSaving}
                   className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
                 >
                   Add Step
                 </TouchFriendlyButton>
-                {steps.length > 0 && (
-                  <TouchFriendlyButton
-                    onClick={finalizeSteps}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                  >
-                    Done
-                  </TouchFriendlyButton>
+                {tempSteps.length > 0 && (
+                  <>
+                    <TouchFriendlyButton
+                      onClick={saveChanges}
+                      disabled={isSaving || !hasUnsavedChanges}
+                      className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 disabled:opacity-50"
+                    >
+                      {isSaving ? 'Saving...' : 'Save Progress'}
+                    </TouchFriendlyButton>
+                    <TouchFriendlyButton
+                      onClick={finalizeSteps}
+                      disabled={isSaving}
+                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+                    >
+                      Done
+                    </TouchFriendlyButton>
+                  </>
                 )}
               </div>
             </div>
