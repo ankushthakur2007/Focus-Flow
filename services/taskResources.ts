@@ -1,4 +1,4 @@
-import { supabase } from '../utils/supabase';
+import { supabase } from './supabase';
 import { Task, TaskResource } from '../types/task';
 import { findTaskResources } from './googleSearch';
 
@@ -12,11 +12,11 @@ export const fetchTaskResources = async (taskId: string): Promise<TaskResource[]
       .select('*')
       .eq('task_id', taskId)
       .order('created_at', { ascending: false });
-      
+
     if (error) {
       throw error;
     }
-    
+
     return data || [];
   } catch (error) {
     console.error('Error fetching task resources:', error);
@@ -38,11 +38,11 @@ export const saveTaskResource = async (resource: Omit<TaskResource, 'id' | 'crea
       }])
       .select()
       .single();
-      
+
     if (error) {
       throw error;
     }
-    
+
     return data;
   } catch (error) {
     console.error('Error saving task resource:', error);
@@ -59,11 +59,11 @@ export const deleteTaskResource = async (resourceId: string): Promise<boolean> =
       .from('task_resources')
       .delete()
       .eq('id', resourceId);
-      
+
     if (error) {
       throw error;
     }
-    
+
     return true;
   } catch (error) {
     console.error('Error deleting task resource:', error);
@@ -78,7 +78,7 @@ export const findAndSaveTaskResources = async (task: Task, userId: string): Prom
   try {
     // Find resources using Google Custom Search
     const { videos, articles } = await findTaskResources(task);
-    
+
     // Prepare resources for saving
     const resources = [
       ...videos.map(video => ({
@@ -100,21 +100,21 @@ export const findAndSaveTaskResources = async (task: Task, userId: string): Prom
         thumbnail_url: article.thumbnail_url || undefined
       }))
     ];
-    
+
     // Save resources to the database
     if (resources.length > 0) {
       const { data, error } = await supabase
         .from('task_resources')
         .insert(resources)
         .select();
-        
+
       if (error) {
         throw error;
       }
-      
+
       return data || [];
     }
-    
+
     return [];
   } catch (error) {
     console.error('Error finding and saving task resources:', error);
@@ -132,11 +132,11 @@ export const refreshTaskResources = async (task: Task, userId: string): Promise<
       .from('task_resources')
       .delete()
       .eq('task_id', task.id);
-      
+
     if (deleteError) {
       throw deleteError;
     }
-    
+
     // Find and save new resources
     return await findAndSaveTaskResources(task, userId);
   } catch (error) {
