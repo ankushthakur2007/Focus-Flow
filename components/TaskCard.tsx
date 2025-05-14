@@ -178,10 +178,10 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
     try {
       console.log('Refreshing task data for task:', task.id);
 
-      // First, get the latest task data
+      // First, get the latest task data with steps
       const { data: updatedTaskData, error: taskError } = await supabase
         .from('tasks')
-        .select('*, steps:task_steps(*)')
+        .select('*, task_steps(*)')
         .eq('id', task.id)
         .single();
 
@@ -194,7 +194,15 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
 
       // Update task object with the latest data
       if (updatedTaskData) {
-        Object.assign(task, updatedTaskData);
+        // Make a deep copy of the updated task data
+        const updatedTask = JSON.parse(JSON.stringify(updatedTaskData));
+
+        // Update the task object with the new data
+        Object.keys(updatedTask).forEach(key => {
+          task[key] = updatedTask[key];
+        });
+
+        console.log('Task object after update:', task);
       }
 
       // Update the status in the UI to match the database
@@ -203,6 +211,14 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
       } else {
         // If no change, still call onStatusChange to refresh the UI
         onStatusChange(task.id, task.status);
+      }
+
+      // Force a re-render by closing and reopening the modal if it's open
+      if (showBreakdownModal) {
+        setShowBreakdownModal(false);
+        setTimeout(() => {
+          setShowBreakdownModal(true);
+        }, 100);
       }
     } catch (err) {
       console.error('Error in handleTaskUpdate:', err);

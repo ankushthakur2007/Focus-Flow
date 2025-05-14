@@ -25,7 +25,7 @@ const TasksPage = () => {
       try {
         let query = supabase
           .from('tasks')
-          .select('*')
+          .select('*, task_steps(*)')
           .order('created_at', { ascending: false });
 
         if (filter !== 'all') {
@@ -33,6 +33,9 @@ const TasksPage = () => {
         }
 
         const { data, error } = await query;
+
+        // Log the fetched tasks for debugging
+        console.log('Fetched tasks with steps:', data);
 
         if (error) {
           throw error;

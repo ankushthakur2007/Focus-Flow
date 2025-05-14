@@ -44,6 +44,31 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
 
       try {
         setLoading(true);
+        console.log('Fetching steps for task:', task.id);
+
+        // Check if task already has steps from the parent component
+        if (task.task_steps && Array.isArray(task.task_steps) && task.task_steps.length > 0) {
+          console.log('Using steps from task object:', task.task_steps);
+          setSteps(task.task_steps);
+
+          // Initialize tempSteps with the steps from task object
+          const initialTempSteps = task.task_steps.map(step => ({
+            id: step.id,
+            title: step.title,
+            description: step.description || '',
+            is_completed: step.is_completed,
+            order_index: step.order_index,
+            isNew: false
+          }));
+
+          setTempSteps(initialTempSteps);
+          setHasUnsavedChanges(false);
+          setModifiedStepIds(new Set());
+          setLoading(false);
+          return;
+        }
+
+        // Otherwise fetch steps from the database
         const { data, error } = await supabase
           .from('task_steps')
           .select('*')
@@ -51,6 +76,8 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
           .order('order_index', { ascending: true });
 
         if (error) throw error;
+
+        console.log('Fetched steps from database:', data);
 
         setSteps(data || []);
 
@@ -76,7 +103,7 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
     };
 
     fetchSteps();
-  }, [task.id, user]);
+  }, [task.id, user, task.task_steps]);
 
   // Handle adding a new step manually (to temporary state only)
   const handleAddStep = () => {
@@ -257,27 +284,51 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
 
     try {
       setIsSaving(true);
+      console.log('Starting to save AI-generated steps...');
 
-      // Add AI-generated steps to tempSteps
+      // Create new steps directly in the database first
+      const newStepsData = aiGeneratedSteps.map((step, index) => ({
+        task_id: task.id,
+        user_id: user.id,
+        title: step.title,
+        description: step.description || '',
+        is_completed: false,
+        order_index: tempSteps.length + index,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
+
+      console.log('Inserting new steps directly:', newStepsData);
+
+      // Insert the steps into the database
+      const { data: insertedSteps, error: insertError } = await supabase
+        .from('task_steps')
+        .insert(newStepsData)
+        .select();
+
+      if (insertError) {
+        throw new Error(`Error inserting AI steps: ${insertError.message}`);
+      }
+
+      console.log('Successfully inserted steps:', insertedSteps);
+
+      // Update tempSteps with the newly inserted steps
       const newTempSteps = [
         ...tempSteps,
-        ...aiGeneratedSteps.map((step, index) => ({
+        ...(insertedSteps || []).map(step => ({
+          id: step.id,
           title: step.title,
           description: step.description || '',
-          is_completed: false,
-          order_index: tempSteps.length + index,
-          isNew: true
+          is_completed: step.is_completed,
+          order_index: step.order_index,
+          isNew: false // Not new anymore since they're in the database
         }))
       ];
 
       setTempSteps(newTempSteps);
+      setSteps([...steps, ...(insertedSteps || [])]);
       setShowAIResults(false);
-      setHasUnsavedChanges(true);
-
-      // Save changes to database and wait for it to complete
-      console.log('Saving AI-generated steps to database...');
-      await saveChanges();
-      console.log('AI-generated steps saved successfully');
+      setHasUnsavedChanges(false); // Already saved to database
 
       // Mark steps as finalized
       const { error: finalizeError } = await supabase
@@ -295,6 +346,14 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
         // Update the local task state
         task.steps_finalized = true;
 
+        // Update task.task_steps with the new steps
+        if (!task.task_steps) {
+          task.task_steps = [];
+        }
+
+        task.task_steps = [...task.task_steps, ...(insertedSteps || [])];
+        console.log('Updated task with new steps:', task);
+
         // Show success message
         setSuccessMessage('AI-generated steps saved and finalized successfully!');
 
@@ -304,7 +363,16 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
         }, 3000);
       }
 
-      // Notify parent component
+      // Refresh task progress
+      const { error: refreshError } = await supabase
+        .rpc('refresh_task_progress', { task_id_param: task.id });
+
+      if (refreshError) {
+        console.error('Error refreshing task progress:', refreshError);
+      }
+
+      // Notify parent component to update the UI
+      console.log('Calling onUpdate to refresh the task in parent component');
       onUpdate();
     } catch (err: any) {
       console.error('Error saving AI steps:', err);
