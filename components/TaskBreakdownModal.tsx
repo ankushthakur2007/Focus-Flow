@@ -608,8 +608,8 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 shadow-inner">
               <div
                 className={`h-3 rounded-full transition-all duration-500 ease-out bg-gradient-to-r ${
-                  task.progress < 30 ? 'from-danger-400 to-danger-600' :
-                  task.progress < 70 ? 'from-warning-400 to-warning-600' :
+                  (task.progress || 0) < 30 ? 'from-danger-400 to-danger-600' :
+                  (task.progress || 0) < 70 ? 'from-warning-400 to-warning-600' :
                   'from-success-400 to-success-600'
                 }`}
                 style={{ width: `${task.progress || 0}%` }}
