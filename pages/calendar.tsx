@@ -40,17 +40,21 @@ export default function Calendar() {
     try {
       let data: CalendarEvent[];
       if (viewMode === 'month') {
+        console.log('Loading month events for:', currentDate);
         data = await fetchMonthEvents(currentDate);
       } else if (viewMode === 'week') {
+        console.log('Loading week events for:', currentDate);
         data = await fetchWeekEvents(currentDate);
       } else {
         // Day view - fetch just for the selected day
+        console.log('Loading day events for:', currentDate);
         const start = new Date(currentDate);
         start.setHours(0, 0, 0, 0);
         const end = new Date(currentDate);
         end.setHours(23, 59, 59, 999);
         data = await fetchCalendarEvents(start, end);
       }
+      console.log(`Loaded ${data.length} events for ${viewMode} view:`, data);
       setEvents(data);
       setError(null);
     } catch (error) {
@@ -240,6 +244,9 @@ export default function Calendar() {
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 }); // Start week on Sunday
     const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
 
+    console.log('Rendering week view for:', weekStart, 'to', weekEnd);
+    console.log('Events available for week view:', events.length);
+
     const days = [];
     let day = weekStart;
 
@@ -275,8 +282,14 @@ export default function Calendar() {
 
         // Find events for this time slot
         const slotEvents = events.filter(event => {
-          const eventStart = parseISO(event.start_time).getTime();
-          return eventStart >= startTime && eventStart < endTime && isSameDay(parseISO(event.start_time), currentDay);
+          const eventStartTime = parseISO(event.start_time);
+          const eventEndTime = parseISO(event.end_time);
+          const eventStartMs = eventStartTime.getTime();
+
+          // Check if the event starts in this hour slot AND on this day
+          return eventStartMs >= startTime &&
+                 eventStartMs < endTime &&
+                 isSameDay(eventStartTime, currentDay);
         });
 
         hourRow.push(
@@ -340,10 +353,23 @@ export default function Calendar() {
     const dayEnd = new Date(currentDate);
     dayEnd.setHours(23, 59, 59, 999);
 
-    // Filter events for this day
-    const dayEvents = events.filter(event =>
-      isSameDay(parseISO(event.start_time), currentDate)
-    );
+    console.log('Rendering day view for:', dayStart, 'to', dayEnd);
+    console.log('Events available for day view:', events.length);
+
+    // Filter events for this day - include events that:
+    // 1. Start on this day, OR
+    // 2. End on this day, OR
+    // 3. Span across this day (start before and end after)
+    const dayEvents = events.filter(event => {
+      const eventStartTime = parseISO(event.start_time);
+      const eventEndTime = parseISO(event.end_time);
+
+      return isSameDay(eventStartTime, currentDate) ||
+             isSameDay(eventEndTime, currentDate) ||
+             (eventStartTime < dayStart && eventEndTime > dayEnd);
+    });
+
+    console.log('Filtered day events:', dayEvents.length);
 
     // Create time slots
     const timeSlots = [];
@@ -354,8 +380,16 @@ export default function Calendar() {
 
       // Find events for this time slot
       const slotEvents = dayEvents.filter(event => {
-        const eventStart = parseISO(event.start_time).getTime();
-        return eventStart >= startTime && eventStart < endTime;
+        const eventStartTime = parseISO(event.start_time);
+        const eventEndTime = parseISO(event.end_time);
+        const eventStartMs = eventStartTime.getTime();
+        const eventEndMs = eventEndTime.getTime();
+
+        // An event should appear in this slot if:
+        // 1. It starts during this hour, OR
+        // 2. It's ongoing during this hour (started before, ends after)
+        return (eventStartMs >= startTime && eventStartMs < endTime) ||
+               (eventStartMs < startTime && eventEndMs > startTime);
       });
 
       timeSlots.push(

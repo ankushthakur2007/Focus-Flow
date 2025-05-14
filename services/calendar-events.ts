@@ -15,14 +15,18 @@ export const fetchCalendarEvents = async (
 ): Promise<CalendarEvent[]> => {
   try {
     // Fetch events from calendar_events table
+    // We want events that overlap with the date range in any way
     const { data: calendarEvents, error: calendarError } = await supabase
       .from('calendar_events')
       .select('*')
-      .gte('start_time', startDate.toISOString())
-      .lte('end_time', endDate.toISOString())
+      .or(`and(start_time.lte.${endDate.toISOString()},end_time.gte.${startDate.toISOString()})`)
       .order('start_time', { ascending: true });
 
     if (calendarError) throw calendarError;
+
+    // Log the events for debugging
+    console.log('Fetched calendar events:', calendarEvents);
+    console.log('Date range:', startDate.toISOString(), 'to', endDate.toISOString());
 
     // Return the events
     return calendarEvents || [];
