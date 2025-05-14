@@ -287,8 +287,17 @@ const calculateAndStoreDailyAnalytics = async (timeRange: TimeRange): Promise<Da
       }
     });
 
+    // Get the current user
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError) {
+      console.error('Error getting current user:', userError);
+      continue; // Skip this day if we can't get the user
+    }
+
     // Create analytics object
     const analytics: Partial<DailyAnalytics> = {
+      user_id: userData.user.id,
       date: dateStr,
       total_tasks: totalTasks,
       completed_tasks: completedTasks,
