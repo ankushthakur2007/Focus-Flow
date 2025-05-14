@@ -67,7 +67,7 @@ const TaskFormModal = ({ onSubmit, onClose }: TaskFormModalProps) => {
         </div>
 
         <div className="p-5 overflow-y-auto flex-grow">
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form id="taskForm" onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Task Title
@@ -181,7 +181,8 @@ const TaskFormModal = ({ onSubmit, onClose }: TaskFormModalProps) => {
             Cancel
           </TouchFriendlyButton>
           <TouchFriendlyButton
-            onClick={handleSubmit}
+            type="submit"
+            form="taskForm"
             className="px-5 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:shadow-md hover:from-primary-600 hover:to-primary-700 flex items-center disabled:opacity-50 transition-all duration-300 active:shadow-inner active:scale-95"
           >
             Add Task
