@@ -4,7 +4,6 @@ import { supabase } from '../services/supabase';
 import AuthContext from './AuthContext';
 import { getTaskStepSuggestions, getTaskSpecificQuestions } from '../services/gemini';
 import TouchFriendlyButton from './TouchFriendlyButton';
-import { AlertCircle } from 'lucide-react';
 
 interface TaskBreakdownModalProps {
   task: Task;
@@ -622,7 +621,9 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
           )}
           {!showAIForm && !showAIResults && task.steps_finalized && (
             <div className="text-gray-500 dark:text-gray-400 flex items-center">
-              <AlertCircle className="h-5 w-5 mr-2" />
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               <span>Steps are finalized</span>
             </div>
           )}
