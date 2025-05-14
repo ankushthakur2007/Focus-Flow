@@ -54,7 +54,15 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
 
   // Handle adding a new step manually
   const handleAddStep = async () => {
-    if (!user || !newStepTitle.trim()) return;
+    if (!newStepTitle.trim()) {
+      setError('Step title cannot be empty');
+      return;
+    }
+
+    if (!user) {
+      setError('User not authenticated. Please sign in to use this feature.');
+      return;
+    }
 
     try {
       const newStep = {
@@ -149,6 +157,10 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
     setIsGeneratingAI(true);
 
     try {
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
       // Get the user's most recent mood
       const { data: moodData, error: moodError } = await supabase
         .from('moods')
@@ -183,7 +195,10 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
 
   // Generate steps using AI
   const generateAISteps = async () => {
-    if (!user) return;
+    if (!user) {
+      setError('User not authenticated. Please sign in to use this feature.');
+      return;
+    }
 
     try {
       setIsGeneratingAI(true);
@@ -221,7 +236,15 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
 
   // Save AI-generated steps
   const saveAISteps = async () => {
-    if (!user || aiGeneratedSteps.length === 0) return;
+    if (!user) {
+      setError('User not authenticated. Please sign in to use this feature.');
+      return;
+    }
+
+    if (aiGeneratedSteps.length === 0) {
+      setError('No steps to save. Please generate steps first.');
+      return;
+    }
 
     try {
       const newSteps = aiGeneratedSteps.map((step, index) => ({
