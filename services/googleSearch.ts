@@ -29,7 +29,7 @@ interface SearchResponse {
  * Generate search queries based on task details
  */
 export const generateSearchQueries = (task: Task): { videoQuery: string; articleQuery: string } => {
-  const { title, description, category, mood } = task;
+  const { title, description, category } = task;
 
   // Clean and normalize the title
   const cleanTitle = title.trim().replace(/[^\w\s]/gi, '');
@@ -40,14 +40,6 @@ export const generateSearchQueries = (task: Task): { videoQuery: string; article
   // Add category context if available
   if (category) {
     baseQuery += ` ${category}`;
-  }
-
-  // Add mood context if available (can help find resources matching the user's current state)
-  if (mood?.mood_type) {
-    // Only use positive/productive moods to avoid negative search results
-    if (['focused', 'motivated', 'productive', 'energetic', 'creative'].includes(mood.mood_type.toLowerCase())) {
-      baseQuery += ` ${mood.mood_type}`;
-    }
   }
 
   // Add description keywords if available
