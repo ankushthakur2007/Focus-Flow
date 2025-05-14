@@ -274,7 +274,7 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-soft hover:shadow-card-hover border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 hover:-translate-y-1 animate-fade-in">
       {/* Task Breakdown Modal */}
       {showBreakdownModal && (
         <TaskBreakdownModal
@@ -285,66 +285,93 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
       )}
 
       {/* Card Header */}
-      <div className="p-4 flex flex-col sm:flex-row justify-between items-start gap-3">
+      <div className="p-5 flex flex-col sm:flex-row justify-between items-start gap-3">
         <div className="flex items-start space-x-3 w-full">
-          <div className={`w-3 h-3 rounded-full mt-1.5 ${getPriorityColor(task.priority)}`}></div>
+          <div className={`w-4 h-4 rounded-full mt-1.5 ${getPriorityColor(task.priority)} shadow-sm flex items-center justify-center`}>
+            {task.status === 'completed' && (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            )}
+          </div>
           <div className="flex-grow">
-            <h3 className={`font-medium break-words ${task.status === 'completed' ? 'line-through text-gray-500 dark:text-gray-400' : ''}`}>
+            <h3 className={`font-medium text-lg break-words ${task.status === 'completed' ? 'line-through text-gray-500 dark:text-gray-400' : ''}`}>
               {task.title}
             </h3>
-            <div className="flex flex-wrap items-center gap-2 mt-1">
-              <div className="flex items-center">
-                <span className="mr-1 text-xs">{getCategoryIcon(task.category)}</span>
-                <span className="text-xs text-gray-600 dark:text-gray-400">{task.category.charAt(0).toUpperCase() + task.category.slice(1)}</span>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <div className="flex items-center badge badge-primary">
+                <span className="mr-1">{getCategoryIcon(task.category)}</span>
+                <span className="text-xs">{task.category.charAt(0).toUpperCase() + task.category.slice(1)}</span>
               </div>
-              <span className={`text-xs font-medium ${getPriorityTextColor(task.priority)}`}>
+              <span className={`badge ${
+                task.priority === 'high' ? 'badge-danger' :
+                task.priority === 'medium' ? 'badge-warning' :
+                'badge-success'
+              }`}>
                 {task.priority.toUpperCase()}
               </span>
               {task.start_date && (
-                <div className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                <div className="badge badge-primary">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1-9a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z" clipRule="evenodd" />
                   </svg>
-                  <span className="text-xs text-gray-600 dark:text-gray-400">
-                    Start: {format(parseISO(task.start_date), 'MMM d')}
+                  <span className="text-xs">
+                    {format(parseISO(task.start_date), 'MMM d')}
                   </span>
                 </div>
               )}
               {task.due_date && (
-                <div className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 mr-1 ${new Date(task.due_date) < new Date() ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`} viewBox="0 0 20 20" fill="currentColor">
+                <div className={`badge ${new Date(task.due_date) < new Date() ? 'badge-danger' : 'badge-primary'}`}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                   </svg>
-                  <span className={`text-xs ${new Date(task.due_date) < new Date() ? 'text-red-500 font-medium' : 'text-gray-600 dark:text-gray-400'}`}>
-                    Due: {format(parseISO(task.due_date), 'MMM d')}
-                  </span>
-                </div>
-              )}
-              {task.progress !== undefined && task.progress > 0 && (
-                <div className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-xs text-gray-600 dark:text-gray-400">
-                    {task.progress}% Complete
+                  <span className="text-xs">
+                    {format(parseISO(task.due_date), 'MMM d')}
                   </span>
                 </div>
               )}
             </div>
+
+            {/* Progress Bar */}
+            {task.progress !== undefined && (
+              <div className="mt-3">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Progress</span>
+                  <span className="text-xs font-medium text-primary-600 dark:text-primary-400">{task.progress}%</span>
+                </div>
+                <div className="progress-bar">
+                  <div
+                    className={`progress-bar-fill bg-gradient-to-r ${
+                      task.progress < 30 ? 'from-danger-400 to-danger-600' :
+                      task.progress < 70 ? 'from-warning-400 to-warning-600' :
+                      'from-success-400 to-success-600'
+                    } animate`}
+                    style={{
+                      width: `${task.progress}%`,
+                      '--progress-width': `${task.progress}%`
+                    } as React.CSSProperties}
+                  ></div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center justify-between w-full sm:w-auto sm:justify-end space-x-2">
-          <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${getStatusBadgeColor(task.status)}`}>
+          <span className={`badge ${
+            task.status === 'pending' ? 'badge-warning' :
+            task.status === 'in_progress' ? 'badge-primary' :
+            task.status === 'completed' ? 'badge-success' : 'badge-primary'
+          }`}>
             {task.status.replace('_', ' ').charAt(0).toUpperCase() + task.status.replace('_', ' ').slice(1)}
           </span>
           <button
             onClick={() => setExpanded(!expanded)}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             aria-label={expanded ? "Collapse task details" : "Expand task details"}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className={`h-5 w-5 transition-transform ${expanded ? 'rotate-180' : ''}`}
+              className={`h-5 w-5 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -356,158 +383,181 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
       </div>
 
       {/* Card Content (visible when expanded) */}
-      <div className={`divide-y divide-gray-100 dark:divide-gray-700 transition-all duration-300 overflow-hidden ${expanded ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'}`}>
-        {/* Description Section */}
-        {task.description && (
-          <div className="px-4 py-3">
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {task.description}
-            </p>
-          </div>
-        )}
+      <div className={`transition-all duration-500 ease-in-out overflow-hidden ${expanded ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className="divide-y divide-gray-100 dark:divide-gray-700">
+          {/* Description Section */}
+          {task.description && (
+            <div className="px-5 py-4 bg-gray-50 dark:bg-gray-800/50">
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                Description
+              </h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                {task.description}
+              </p>
+            </div>
+          )}
 
-        {/* Details Section */}
-        <div className="px-4 py-3">
-          <div className="flex flex-wrap items-center gap-3">
-            {task.created_at && (
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                Created: {format(parseISO(task.created_at), 'MMM d, yyyy')}
-              </span>
-            )}
-            {task.start_date && (
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                Start: {format(parseISO(task.start_date), 'MMM d, yyyy h:mm a')}
-              </span>
-            )}
-            {task.due_date && (
-              <span className={`text-xs ${new Date(task.due_date) < new Date() ? 'text-red-500 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
-                Due: {format(parseISO(task.due_date), 'MMM d, yyyy h:mm a')}
-              </span>
-            )}
-          </div>
+          {/* Details Section */}
+          <div className="px-5 py-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {task.created_at && (
+                <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                  </svg>
+                  <span>Created: {format(parseISO(task.created_at), 'MMM d, yyyy')}</span>
+                </div>
+              )}
+              {task.start_date && (
+                <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-success-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1-9a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <span>Start: {format(parseISO(task.start_date), 'MMM d, yyyy h:mm a')}</span>
+                </div>
+              )}
+              {task.due_date && (
+                <div className="flex items-center text-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 mr-2 ${new Date(task.due_date) < new Date() ? 'text-danger-500' : 'text-warning-500'}`} viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                  </svg>
+                  <span className={`${new Date(task.due_date) < new Date() ? 'text-danger-600 dark:text-danger-400 font-medium' : 'text-gray-600 dark:text-gray-400'}`}>
+                    Due: {format(parseISO(task.due_date), 'MMM d, yyyy h:mm a')}
+                  </span>
+                </div>
+              )}
+            </div>
 
-          {/* Notification Toggle */}
-          <div className="mt-3 flex items-center">
-            <label htmlFor={`notification-toggle-${task.id}`} className={`flex items-center ${isUpdating ? 'cursor-wait opacity-70' : 'cursor-pointer'}`}>
-              <div className="relative">
-                <input
-                  id={`notification-toggle-${task.id}`}
-                  type="checkbox"
-                  className="sr-only"
-                  checked={notificationsEnabled}
-                  onChange={(e) => toggleNotifications(e.target.checked)}
-                  disabled={isUpdating}
-                />
-                <div className={`block w-10 h-6 rounded-full ${notificationsEnabled ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'} transition-colors duration-300`}></div>
-                <div className={`absolute left-1 top-1 bg-white dark:bg-gray-200 w-4 h-4 rounded-full transition-transform duration-300 ${notificationsEnabled ? 'transform translate-x-4' : ''}`}></div>
-              </div>
-              <div className="ml-3 text-sm text-gray-700 dark:text-gray-300 flex items-center">
-                {isUpdating ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Updating...
-                  </>
-                ) : (
-                  'Enable notifications'
-                )}
-              </div>
-            </label>
-          </div>
-        </div>
-
-        {/* AI Recommendation */}
-        <div className="px-4 py-3">
-          <TaskRecommendation taskId={task.id} />
-        </div>
-
-        {/* Resources Section */}
-        <div className="px-4 py-3">
-          <ResourcesSection
-            resources={resources}
-            isLoading={isLoadingResources}
-            onRefresh={handleRefreshResources}
-          />
-        </div>
-
-        {/* Actions */}
-        <div className="px-4 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <div className="flex items-center w-full sm:w-auto">
-            <select
-              value={task.status}
-              onChange={(e) => onStatusChange(task.id, e.target.value)}
-              className="text-sm border border-gray-300 rounded-md px-2 py-1 dark:bg-gray-700 dark:border-gray-600 w-full sm:w-auto"
-              aria-label="Change task status"
-            >
-              <option value="pending">Pending</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-            </select>
+            {/* Notification Toggle */}
+            <div className="mt-4 flex items-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+              <label htmlFor={`notification-toggle-${task.id}`} className={`flex items-center ${isUpdating ? 'cursor-wait opacity-70' : 'cursor-pointer'} w-full`}>
+                <div className="relative">
+                  <input
+                    id={`notification-toggle-${task.id}`}
+                    type="checkbox"
+                    className="sr-only"
+                    checked={notificationsEnabled}
+                    onChange={(e) => toggleNotifications(e.target.checked)}
+                    disabled={isUpdating}
+                  />
+                  <div className={`block w-12 h-6 rounded-full transition-colors duration-300 ${notificationsEnabled ? 'bg-gradient-to-r from-primary-400 to-primary-600 shadow-glow' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
+                  <div className={`absolute left-1 top-1 bg-white dark:bg-gray-200 w-4 h-4 rounded-full transition-all duration-300 ${notificationsEnabled ? 'transform translate-x-6' : ''}`}></div>
+                </div>
+                <div className="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                  {isUpdating ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 mr-2 ${notificationsEnabled ? 'text-primary-500' : 'text-gray-400'}`} viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                      </svg>
+                      {notificationsEnabled ? 'Notifications enabled' : 'Enable notifications'}
+                    </>
+                  )}
+                </div>
+              </label>
+            </div>
           </div>
 
-          <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
-            <button
-              onClick={() => setShowBreakdownModal(true)}
-              className="text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 flex items-center px-3 py-1 rounded-md hover:bg-primary-50 dark:hover:bg-gray-700 transition-colors"
-              title="Break down task into steps"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 mr-1"
-                viewBox="0 0 20 20"
-                fill="currentColor"
+          {/* AI Recommendation */}
+          <div className="px-5 py-4 bg-gradient-to-br from-primary-50 to-white dark:from-primary-900/20 dark:to-gray-800/50">
+            <TaskRecommendation taskId={task.id} />
+          </div>
+
+          {/* Resources Section */}
+          <div className="px-5 py-4">
+            <ResourcesSection
+              resources={resources}
+              isLoading={isLoadingResources}
+              onRefresh={handleRefreshResources}
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="px-5 py-4 bg-gray-50 dark:bg-gray-800/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center w-full sm:w-auto">
+              <select
+                value={task.status}
+                onChange={(e) => onStatusChange(task.id, e.target.value)}
+                className="input text-sm py-2 w-full sm:w-auto"
+                aria-label="Change task status"
               >
-                <path
-                  fillRule="evenodd"
-                  d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <span className="hidden sm:inline">Breakdown</span>
-            </button>
+                <option value="pending">Pending</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
 
-            <a
-              href={`/chat/${task.id}`}
-              className="text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 flex items-center px-3 py-1 rounded-md hover:bg-primary-50 dark:hover:bg-gray-700 transition-colors"
-              title="Chat about this task"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 mr-1"
-                viewBox="0 0 20 20"
-                fill="currentColor"
+            <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
+              <button
+                onClick={() => setShowBreakdownModal(true)}
+                className="btn btn-secondary flex items-center"
+                title="Break down task into steps"
               >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <span className="hidden sm:inline">Chat</span>
-            </a>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 mr-2"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span className="hidden sm:inline">Breakdown</span>
+              </button>
 
-            <button
-              onClick={() => onDelete(task.id)}
-              className="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-2 rounded-md hover:bg-red-50 dark:hover:bg-gray-700 transition-colors"
-              title="Delete task"
-              aria-label="Delete task"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
+              <a
+                href={`/chat/${task.id}`}
+                className="btn btn-primary flex items-center"
+                title="Chat about this task"
               >
-                <path
-                  fillRule="evenodd"
-                  d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 mr-2"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span className="hidden sm:inline">Chat</span>
+              </a>
+
+              <button
+                onClick={() => onDelete(task.id)}
+                className="btn btn-danger btn-icon"
+                title="Delete task"
+                aria-label="Delete task"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
