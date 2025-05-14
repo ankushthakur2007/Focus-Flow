@@ -17,6 +17,10 @@ interface TaskStepSuggestionResponse {
   steps: {title: string, description: string}[];
 }
 
+interface TaskQuestionsResponse {
+  questions: string[];
+}
+
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 export const getRecommendation = async (
@@ -346,6 +350,126 @@ Consider the following in your recommendation:
 5. Time of day and potential energy levels
 
 If there are no tasks, suggest creating a new task based on the user's mood and historical patterns.
+`;
+};
+
+export const getTaskSpecificQuestions = async (
+  task: Task,
+  currentMood: string
+): Promise<TaskQuestionsResponse> => {
+  try {
+    // Create a prompt for the AI
+    const prompt = createTaskQuestionsPrompt(task, currentMood);
+
+    // Make the API request
+    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: prompt }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1024,
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini API error:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('Gemini API task questions response:', data);
+
+    // Extract the text from the response
+    const aiResponse = data.candidates[0].content.parts[0].text;
+
+    // Parse the JSON response from the AI
+    try {
+      const jsonStart = aiResponse.indexOf('{');
+      const jsonEnd = aiResponse.lastIndexOf('}') + 1;
+
+      if (jsonStart >= 0 && jsonEnd > jsonStart) {
+        const jsonString = aiResponse.substring(jsonStart, jsonEnd);
+        const result = JSON.parse(jsonString) as TaskQuestionsResponse;
+        return result;
+      }
+    } catch (e) {
+      console.error('Error parsing AI task questions response as JSON:', e);
+    }
+
+    // Fallback if JSON parsing fails
+    return {
+      questions: [
+        "What's the main goal you want to achieve with this task?",
+        "How much time do you have to complete this task?",
+        "What resources or skills do you need for this task?",
+        "Are there any specific challenges you anticipate?"
+      ]
+    };
+  } catch (error) {
+    console.error('Error getting task-specific questions:', error);
+
+    // Return fallback questions instead of throwing
+    return {
+      questions: [
+        "What's the main goal you want to achieve with this task?",
+        "How much time do you have to complete this task?",
+        "What resources or skills do you need for this task?",
+        "Are there any specific challenges you anticipate?"
+      ]
+    };
+  }
+};
+
+const createTaskQuestionsPrompt = (
+  task: Task,
+  currentMood: string
+): string => {
+  // Create the prompt
+  return `
+You are an AI assistant for a productivity app called FocusFlow. Based on the user's task details and current mood, generate 4-5 specific questions that will help gather information to break down this task into steps.
+
+Task Details:
+Title: ${task.title}
+Description: ${task.description || 'No description provided'}
+Priority: ${task.priority}
+Category: ${task.category}
+Status: ${task.status}
+
+Current Mood: ${currentMood}
+
+Please generate 4-5 specific questions that are tailored to this particular task. The questions should help gather information that would be useful for breaking this task down into specific, actionable steps.
+
+Return your response in the following JSON format:
+{
+  "questions": [
+    "Question 1 specific to this task?",
+    "Question 2 specific to this task?",
+    "Question 3 specific to this task?",
+    "Question 4 specific to this task?",
+    "Question 5 specific to this task? (optional)"
+  ]
+}
+
+Guidelines:
+1. Make questions specific to the task category and nature (not generic)
+2. Include questions about resources needed, timeline, dependencies, and potential obstacles
+3. Consider the user's current mood when formulating questions
+4. Phrase questions to elicit detailed, actionable information
+5. Avoid yes/no questions - use open-ended questions instead
+
+Make your questions practical, clear, and helpful for gathering information to break down this specific task.
 `;
 };
 
