@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { CalendarEvent } from '../types/calendar';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays } from 'date-fns';
+import { Task } from '../types/task';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isAfter } from 'date-fns';
 
 /**
  * Fetch calendar events for a specific date range
@@ -13,15 +14,18 @@ export const fetchCalendarEvents = async (
   endDate: Date
 ): Promise<CalendarEvent[]> => {
   try {
-    const { data, error } = await supabase
+    // Fetch events from calendar_events table
+    const { data: calendarEvents, error: calendarError } = await supabase
       .from('calendar_events')
       .select('*')
       .gte('start_time', startDate.toISOString())
       .lte('end_time', endDate.toISOString())
       .order('start_time', { ascending: true });
 
-    if (error) throw error;
-    return data || [];
+    if (calendarError) throw calendarError;
+
+    // Return the events
+    return calendarEvents || [];
   } catch (error) {
     console.error('Error fetching calendar events:', error);
     return [];
