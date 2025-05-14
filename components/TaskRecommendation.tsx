@@ -25,7 +25,7 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
     let isMounted = true;
     setLoading(true);
     setError(null);
-    
+
     try {
       // First, get the task to check if it's a shared task
       const { data: taskData, error: taskError } = await supabase
@@ -113,7 +113,7 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
         setLoading(false);
       }
     }
-    
+
     return () => {
       isMounted = false;
     };
@@ -121,10 +121,10 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
 
   const generateNewRecommendation = async (taskData: Task) => {
     if (!user) return;
-    
+
     setRegenerating(true);
     setError(null);
-    
+
     try {
       // Get the most recent mood
       const { data: moodData, error: moodError } = await supabase
@@ -139,7 +139,7 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
       }
 
       const currentMood = moodData && moodData.length > 0 ? moodData[0].name : 'neutral';
-      
+
       // Generate recommendation from Gemini AI
       const result = await getTaskRecommendation(taskData, currentMood);
 
@@ -180,9 +180,9 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
 
   useEffect(() => {
     let isMounted = true;
-    
+
     fetchRecommendation();
-    
+
     // Cleanup function to prevent state updates after unmounting
     return () => {
       isMounted = false;
@@ -195,7 +195,7 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
 
   useEffect(() => {
     let isMounted = true;
-    
+
     const checkPermission = async () => {
       if (!user || !taskId) return;
 
@@ -245,7 +245,7 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
     };
 
     checkPermission();
-    
+
     // Cleanup function
     return () => {
       isMounted = false;
@@ -254,7 +254,7 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
 
   const handleRegenerateRecommendation = async () => {
     if (!user || !taskId) return;
-    
+
     try {
       const { data: taskData, error: taskError } = await supabase
         .from('tasks')
@@ -310,7 +310,7 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
         <div>Error: {error}</div>
         {user && taskOwnerId === user.id && (
           <div className="mt-2">
-            <button 
+            <button
               onClick={handleRegenerateRecommendation}
               className="text-xs text-primary-600 hover:text-primary-800 flex items-center"
             >
@@ -340,7 +340,7 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
         <div>No AI insights available for this task yet.</div>
         {user && taskOwnerId === user.id && (
           <div className="mt-2 flex items-center">
-            <button 
+            <button
               onClick={handleRegenerateRecommendation}
               className="text-xs text-primary-600 hover:text-primary-800 flex items-center"
             >
@@ -425,7 +425,18 @@ const TaskRecommendationContent = ({ taskId }: TaskRecommendationProps) => {
               <span className="font-medium">Steps:</span>
               <ol className="list-decimal pl-5 mt-1 space-y-1">
                 {recommendation.steps.map((step, index) => (
-                  <li key={index}>{step}</li>
+                  <li key={index}>
+                    {typeof step === 'string' ? (
+                      step
+                    ) : (
+                      <div>
+                        <div className="font-medium">{step.title}</div>
+                        {step.description && (
+                          <div className="text-sm mt-1">{step.description}</div>
+                        )}
+                      </div>
+                    )}
+                  </li>
                 ))}
               </ol>
             </div>
