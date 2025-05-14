@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   start_date TIMESTAMP WITH TIME ZONE,
   due_date TIMESTAMP WITH TIME ZONE,
   progress INTEGER DEFAULT 0,
+  steps_finalized BOOLEAN DEFAULT false,
   notification_settings JSONB DEFAULT '{
     "custom_reminder": false,
     "reminder_time": 24,
@@ -237,6 +238,7 @@ CREATE INDEX IF NOT EXISTS tasks_created_at_idx ON tasks (created_at);
 CREATE INDEX IF NOT EXISTS tasks_start_date_idx ON tasks (start_date);
 CREATE INDEX IF NOT EXISTS tasks_due_date_idx ON tasks (due_date);
 CREATE INDEX IF NOT EXISTS tasks_progress_idx ON tasks (progress);
+CREATE INDEX IF NOT EXISTS tasks_steps_finalized_idx ON tasks (steps_finalized);
 CREATE INDEX IF NOT EXISTS moods_user_id_idx ON moods (user_id);
 CREATE INDEX IF NOT EXISTS moods_timestamp_idx ON moods (timestamp);
 CREATE INDEX IF NOT EXISTS recommendations_user_id_idx ON recommendations (user_id);
