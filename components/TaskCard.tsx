@@ -173,9 +173,33 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
     }
   };
 
-  const handleTaskUpdate = () => {
+  const handleTaskUpdate = async () => {
     // Refresh the task data after steps are added/updated
-    onStatusChange(task.id, task.status);
+    try {
+      // First, get the latest task data
+      const { data: updatedTaskData, error: taskError } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('id', task.id)
+        .single();
+
+      if (taskError) {
+        console.error('Error fetching updated task:', taskError);
+        return;
+      }
+
+      // Update the status in the UI to match the database
+      if (updatedTaskData && updatedTaskData.status !== task.status) {
+        onStatusChange(task.id, updatedTaskData.status);
+      } else {
+        // If no change, still call onStatusChange to refresh the UI
+        onStatusChange(task.id, task.status);
+      }
+    } catch (err) {
+      console.error('Error in handleTaskUpdate:', err);
+      // Fallback to original behavior
+      onStatusChange(task.id, task.status);
+    }
   };
 
   return (

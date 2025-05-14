@@ -29,7 +29,7 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
   useEffect(() => {
     const fetchSteps = async () => {
       if (!user) return;
-      
+
       try {
         setLoading(true);
         const { data, error } = await supabase
@@ -37,9 +37,9 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
           .select('*')
           .eq('task_id', task.id)
           .order('order_index', { ascending: true });
-        
+
         if (error) throw error;
-        
+
         setSteps(data || []);
       } catch (err: any) {
         console.error('Error fetching task steps:', err);
@@ -48,14 +48,14 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
         setLoading(false);
       }
     };
-    
+
     fetchSteps();
   }, [task.id, user]);
 
   // Handle adding a new step manually
   const handleAddStep = async () => {
     if (!user || !newStepTitle.trim()) return;
-    
+
     try {
       const newStep = {
         task_id: task.id,
@@ -65,14 +65,14 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
         is_completed: false,
         order_index: steps.length
       };
-      
+
       const { data, error } = await supabase
         .from('task_steps')
         .insert([newStep])
         .select();
-      
+
       if (error) throw error;
-      
+
       setSteps([...steps, data[0]]);
       setNewStepTitle('');
       setNewStepDescription('');
@@ -90,12 +90,23 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
         .from('task_steps')
         .update({ is_completed: !isCompleted, updated_at: new Date().toISOString() })
         .eq('id', stepId);
-      
+
       if (error) throw error;
-      
-      setSteps(steps.map(step => 
+
+      // Update local state
+      setSteps(steps.map(step =>
         step.id === stepId ? { ...step, is_completed: !isCompleted } : step
       ));
+
+      // Force refresh task progress
+      const { error: refreshError } = await supabase
+        .rpc('refresh_task_progress', { task_id_param: task.id });
+
+      if (refreshError) {
+        console.error('Error refreshing task progress:', refreshError);
+      }
+
+      // Notify parent component
       onUpdate();
     } catch (err: any) {
       console.error('Error toggling step completion:', err);
@@ -110,10 +121,21 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
         .from('task_steps')
         .delete()
         .eq('id', stepId);
-      
+
       if (error) throw error;
-      
+
+      // Update local state
       setSteps(steps.filter(step => step.id !== stepId));
+
+      // Force refresh task progress
+      const { error: refreshError } = await supabase
+        .rpc('refresh_task_progress', { task_id_param: task.id });
+
+      if (refreshError) {
+        console.error('Error refreshing task progress:', refreshError);
+      }
+
+      // Notify parent component
       onUpdate();
     } catch (err: any) {
       console.error('Error deleting step:', err);
@@ -136,10 +158,10 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
   // Generate steps using AI
   const generateAISteps = async () => {
     if (!user) return;
-    
+
     try {
       setIsGeneratingAI(true);
-      
+
       // Get the user's most recent mood
       const { data: moodData, error: moodError } = await supabase
         .from('moods')
@@ -147,11 +169,11 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
         .eq('user_id', user.id)
         .order('timestamp', { ascending: false })
         .limit(1);
-      
+
       if (moodError) throw moodError;
-      
+
       const currentMood = moodData && moodData.length > 0 ? moodData[0].name : 'neutral';
-      
+
       // Generate steps using AI
       const result = await getTaskStepSuggestions(
         task,
@@ -159,7 +181,7 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
         aiQuestions,
         aiAnswers
       );
-      
+
       setAiGeneratedSteps(result.steps || []);
       setShowAIResults(true);
       setShowAIForm(false);
@@ -174,7 +196,7 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
   // Save AI-generated steps
   const saveAISteps = async () => {
     if (!user || aiGeneratedSteps.length === 0) return;
-    
+
     try {
       const newSteps = aiGeneratedSteps.map((step, index) => ({
         task_id: task.id,
@@ -184,16 +206,27 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
         is_completed: false,
         order_index: steps.length + index
       }));
-      
+
       const { data, error } = await supabase
         .from('task_steps')
         .insert(newSteps)
         .select();
-      
+
       if (error) throw error;
-      
+
+      // Update local state
       setSteps([...steps, ...data]);
       setShowAIResults(false);
+
+      // Force refresh task progress
+      const { error: refreshError } = await supabase
+        .rpc('refresh_task_progress', { task_id_param: task.id });
+
+      if (refreshError) {
+        console.error('Error refreshing task progress:', refreshError);
+      }
+
+      // Notify parent component
       onUpdate();
     } catch (err: any) {
       console.error('Error saving AI steps:', err);
@@ -239,8 +272,8 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
               </span>
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-              <div 
-                className="bg-primary-600 h-2.5 rounded-full" 
+              <div
+                className="bg-primary-600 h-2.5 rounded-full"
                 style={{ width: `${task.progress || 0}%` }}
               ></div>
             </div>
@@ -301,7 +334,7 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
               <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                 Please answer these questions to help the AI generate better steps for your task:
               </p>
-              
+
               {aiQuestions.map((question, index) => (
                 <div key={index} className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -319,7 +352,7 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
                   />
                 </div>
               ))}
-              
+
               <div className="flex justify-end gap-2 mt-4">
                 <TouchFriendlyButton
                   onClick={() => setShowAIForm(false)}
@@ -352,7 +385,7 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
           {showAIResults && (
             <div className="mb-6 border border-gray-200 dark:border-gray-700 rounded-md p-4">
               <h3 className="font-medium mb-3">AI-Generated Steps</h3>
-              
+
               <ul className="space-y-2 mb-4">
                 {aiGeneratedSteps.map((step, index) => (
                   <li key={index} className="border border-gray-200 dark:border-gray-700 rounded-md p-3">
@@ -365,7 +398,7 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
                   </li>
                 ))}
               </ul>
-              
+
               <div className="flex justify-end gap-2 mt-4">
                 <TouchFriendlyButton
                   onClick={discardAISteps}
@@ -387,7 +420,7 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
           {!showAIForm && !showAIResults && (
             <div className="border border-gray-200 dark:border-gray-700 rounded-md p-4">
               <h3 className="font-medium mb-3">Add New Step</h3>
-              
+
               <div className="mb-4">
                 <label htmlFor="stepTitle" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Step Title
@@ -401,7 +434,7 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
                   placeholder="Enter step title"
                 />
               </div>
-              
+
               <div className="mb-4">
                 <label htmlFor="stepDescription" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Description (optional)
@@ -415,7 +448,7 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
                   placeholder="Enter step description"
                 />
               </div>
-              
+
               <div className="flex justify-end">
                 <TouchFriendlyButton
                   onClick={handleAddStep}
@@ -436,7 +469,7 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
           >
             Close
           </TouchFriendlyButton>
-          
+
           {!showAIForm && !showAIResults && (
             <TouchFriendlyButton
               onClick={startAIGeneration}

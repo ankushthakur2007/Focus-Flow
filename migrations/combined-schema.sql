@@ -368,9 +368,9 @@ BEGIN
   UPDATE tasks
   SET
     progress = progress_percentage,
-    -- If all steps are completed, mark the task as completed
+    -- If all steps are completed and there are steps, mark the task as completed
     status = CASE
-      WHEN progress_percentage = 100 THEN 'completed'
+      WHEN progress_percentage = 100 AND total_steps > 0 THEN 'completed'
       ELSE status
     END,
     updated_at = NOW()
@@ -803,3 +803,46 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Grant permission to use the function
 GRANT EXECUTE ON FUNCTION find_user_by_email(text) TO authenticated;
+
+-- Add a function to force refresh task progress
+DROP FUNCTION IF EXISTS refresh_task_progress(UUID);
+CREATE OR REPLACE FUNCTION refresh_task_progress(task_id_param UUID)
+RETURNS VOID AS $$
+DECLARE
+  total_steps INTEGER;
+  completed_steps INTEGER;
+  progress_percentage INTEGER;
+BEGIN
+  -- Count total steps for the task
+  SELECT COUNT(*) INTO total_steps
+  FROM task_steps
+  WHERE task_id = task_id_param;
+
+  -- Count completed steps for the task
+  SELECT COUNT(*) INTO completed_steps
+  FROM task_steps
+  WHERE task_id = task_id_param AND is_completed = true;
+
+  -- Calculate progress percentage
+  IF total_steps > 0 THEN
+    progress_percentage := (completed_steps * 100) / total_steps;
+  ELSE
+    progress_percentage := 0;
+  END IF;
+
+  -- Update the task's progress
+  UPDATE tasks
+  SET
+    progress = progress_percentage,
+    -- If all steps are completed and there are steps, mark the task as completed
+    status = CASE
+      WHEN progress_percentage = 100 AND total_steps > 0 THEN 'completed'
+      ELSE status
+    END,
+    updated_at = NOW()
+  WHERE id = task_id_param;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Grant permission to use the function
+GRANT EXECUTE ON FUNCTION refresh_task_progress(UUID) TO authenticated;
