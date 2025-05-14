@@ -76,43 +76,71 @@ export const deleteTaskResource = async (resourceId: string): Promise<boolean> =
  */
 export const findAndSaveTaskResources = async (task: Task, userId: string): Promise<TaskResource[]> => {
   try {
+    console.log('Finding and saving resources for task:', task.title);
+
     // Find resources using Google Custom Search
     const { videos, articles } = await findTaskResources(task);
+
+    console.log('Resources found:', {
+      videosCount: videos.length,
+      articlesCount: articles.length
+    });
+
+    // If no resources found, return empty array
+    if (videos.length === 0 && articles.length === 0) {
+      console.log('No resources found for task:', task.title);
+      return [];
+    }
 
     // Prepare resources for saving
     const resources = [
       ...videos.map(video => ({
         task_id: task.id,
         user_id: userId,
-        title: video.title,
+        title: video.title || 'Video Resource', // Provide fallback title
         url: video.url,
-        description: video.description,
+        description: video.description || 'Video tutorial related to this task', // Provide fallback description
         type: video.type,
         thumbnail_url: video.thumbnail_url || undefined
       })),
       ...articles.map(article => ({
         task_id: task.id,
         user_id: userId,
-        title: article.title,
+        title: article.title || 'Article Resource', // Provide fallback title
         url: article.url,
-        description: article.description,
+        description: article.description || 'Article related to this task', // Provide fallback description
         type: article.type,
         thumbnail_url: article.thumbnail_url || undefined
       }))
     ];
 
+    console.log('Prepared resources for saving:', resources.length);
+
     // Save resources to the database
     if (resources.length > 0) {
-      const { data, error } = await supabase
-        .from('task_resources')
-        .insert(resources)
-        .select();
+      // Insert resources in batches to avoid potential size limits
+      const batchSize = 10;
+      let savedResources: TaskResource[] = [];
 
-      if (error) {
-        throw error;
+      for (let i = 0; i < resources.length; i += batchSize) {
+        const batch = resources.slice(i, i + batchSize);
+        console.log(`Saving batch ${i/batchSize + 1} of resources (${batch.length} items)`);
+
+        const { data, error } = await supabase
+          .from('task_resources')
+          .insert(batch)
+          .select();
+
+        if (error) {
+          console.error('Error saving batch of resources:', error);
+          // Continue with next batch instead of failing completely
+        } else if (data) {
+          savedResources = [...savedResources, ...data];
+        }
       }
 
-      return data || [];
+      console.log('Successfully saved resources:', savedResources.length);
+      return savedResources;
     }
 
     return [];
@@ -127,18 +155,34 @@ export const findAndSaveTaskResources = async (task: Task, userId: string): Prom
  */
 export const refreshTaskResources = async (task: Task, userId: string): Promise<TaskResource[]> => {
   try {
+    console.log('Refreshing resources for task:', task.title);
+
+    // First check if the task exists
+    if (!task.id) {
+      console.error('Cannot refresh resources: Task ID is missing');
+      return [];
+    }
+
     // Delete existing resources
+    console.log('Deleting existing resources for task:', task.id);
     const { error: deleteError } = await supabase
       .from('task_resources')
       .delete()
       .eq('task_id', task.id);
 
     if (deleteError) {
-      throw deleteError;
+      console.error('Error deleting existing resources:', deleteError);
+      // Continue anyway to try to add new resources
+    } else {
+      console.log('Successfully deleted existing resources for task:', task.id);
     }
 
     // Find and save new resources
-    return await findAndSaveTaskResources(task, userId);
+    console.log('Finding and saving new resources for task:', task.title);
+    const newResources = await findAndSaveTaskResources(task, userId);
+    console.log('Refresh complete. New resources count:', newResources.length);
+
+    return newResources;
   } catch (error) {
     console.error('Error refreshing task resources:', error);
     return [];
