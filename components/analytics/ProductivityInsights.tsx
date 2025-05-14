@@ -3,8 +3,11 @@ import { ArrowPathIcon as RefreshIcon } from '@heroicons/react/24/outline';
 import { LightBulbIcon, ClockIcon, ChartBarIcon, TagIcon, FaceSmileIcon as EmojiHappyIcon } from '@heroicons/react/24/solid';
 import { fetchProductivityInsights, generateProductivityInsights, ProductivityInsight } from '../../services/analytics';
 
+// Import the TimeRange type from analytics.ts
+type TimeRange = '7days' | '30days' | '90days' | 'all';
+
 interface ProductivityInsightsProps {
-  timeRange: string;
+  timeRange: TimeRange;
   isLoading: boolean;
 }
 
