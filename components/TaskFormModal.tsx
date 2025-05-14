@@ -180,13 +180,13 @@ const TaskFormModal = ({ onSubmit, onClose }: TaskFormModalProps) => {
           >
             Cancel
           </TouchFriendlyButton>
-          <TouchFriendlyButton
+          <button
             type="submit"
             form="taskForm"
-            className="px-5 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:shadow-md hover:from-primary-600 hover:to-primary-700 flex items-center disabled:opacity-50 transition-all duration-300 active:shadow-inner active:scale-95"
+            className="px-5 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:shadow-md hover:from-primary-600 hover:to-primary-700 flex items-center disabled:opacity-50 transition-all duration-300 active:shadow-inner active:scale-95 min-h-[44px] min-w-[44px]"
           >
             Add Task
-          </TouchFriendlyButton>
+          </button>
         </div>
       </div>
     </div>
