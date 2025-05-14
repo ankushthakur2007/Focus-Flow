@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import AuthContext from '../components/AuthContext';
-import Layout from '../components/Layout';
+
 import { fetchCalendarEvents, fetchMonthEvents, fetchWeekEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '../services/calendar-events';
 import { CalendarEvent } from '../types/calendar';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths,
@@ -477,7 +477,7 @@ export default function Calendar() {
   };
 
   return (
-    <Layout>
+    <>
       <Head>
         <title>Calendar | FocusFlow</title>
         <meta name="description" content="View and manage your tasks in a calendar view" />
@@ -576,6 +576,6 @@ export default function Calendar() {
           onDelete={handleDeleteEvent}
         />
       )}
-    </Layout>
+    </>
   );
 }
