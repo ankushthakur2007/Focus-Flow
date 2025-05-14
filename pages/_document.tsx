@@ -12,9 +12,12 @@ export default function Document() {
         <meta name="apple-mobile-web-app-title" content="FocusFlow" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
-        
+
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon/favicon-16x16.png" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </Head>
       <body>
