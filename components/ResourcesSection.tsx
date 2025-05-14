@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { TaskResource } from '../types/task';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
-import { TouchFriendlyButton } from './TouchFriendlyButton';
+import TouchFriendlyButton from './TouchFriendlyButton';
 
 interface ResourcesSectionProps {
   resources: TaskResource[];
@@ -17,17 +17,17 @@ const ResourcesSection: React.FC<ResourcesSectionProps> = ({
   className = ''
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  
+
   // Group resources by type
   const videoResources = resources.filter(resource => resource.type === 'video');
   const articleResources = resources.filter(resource => resource.type === 'article' || resource.type === 'blog');
   const otherResources = resources.filter(resource => resource.type === 'other');
-  
+
   const hasResources = resources.length > 0;
-  
+
   return (
     <div className={`mt-4 ${className}`}>
-      <div 
+      <div
         className="flex items-center justify-between cursor-pointer py-2"
         onClick={() => setIsExpanded(!isExpanded)}
       >
@@ -47,7 +47,7 @@ const ResourcesSection: React.FC<ResourcesSectionProps> = ({
           )}
         </button>
       </div>
-      
+
       {isExpanded && (
         <div className="mt-2 space-y-4">
           {isLoading ? (
@@ -81,7 +81,7 @@ const ResourcesSection: React.FC<ResourcesSectionProps> = ({
                   </div>
                 </div>
               )}
-              
+
               {/* Articles Section */}
               {articleResources.length > 0 && (
                 <div>
@@ -95,7 +95,7 @@ const ResourcesSection: React.FC<ResourcesSectionProps> = ({
                   </div>
                 </div>
               )}
-              
+
               {/* Other Resources Section */}
               {otherResources.length > 0 && (
                 <div>
@@ -109,7 +109,7 @@ const ResourcesSection: React.FC<ResourcesSectionProps> = ({
                   </div>
                 </div>
               )}
-              
+
               {/* Refresh Button */}
               {onRefresh && (
                 <div className="flex justify-end mt-4">
@@ -135,18 +135,18 @@ interface ResourceCardProps {
 
 const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
   return (
-    <a 
-      href={resource.url} 
-      target="_blank" 
+    <a
+      href={resource.url}
+      target="_blank"
       rel="noopener noreferrer"
       className="block p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
     >
       <div className="flex items-start space-x-3">
         {resource.thumbnail_url && (
           <div className="flex-shrink-0">
-            <img 
-              src={resource.thumbnail_url} 
-              alt={resource.title} 
+            <img
+              src={resource.thumbnail_url}
+              alt={resource.title}
               className="w-16 h-12 object-cover rounded"
             />
           </div>
