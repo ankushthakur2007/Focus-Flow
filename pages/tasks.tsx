@@ -5,6 +5,7 @@ import TaskCard from '../components/TaskCard';
 import TaskForm from '../components/TaskForm';
 import { Task } from '../types/task';
 import { getTaskRecommendation } from '../services/gemini';
+import { findAndSaveTaskResources } from '../services/taskResources';
 
 const TasksPage = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -182,6 +183,14 @@ const TasksPage = () => {
           }
         } catch (aiError) {
           console.error('Error getting AI recommendation:', aiError);
+        }
+
+        // Find and save resources for the task
+        try {
+          console.log('Finding resources for task:', task.id);
+          await findAndSaveTaskResources(task, user.id);
+        } catch (resourceError) {
+          console.error('Error finding and saving resources:', resourceError);
         }
       }
 

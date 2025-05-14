@@ -86,6 +86,20 @@ CREATE TABLE IF NOT EXISTS task_steps (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create task_resources table to store resources for each task
+CREATE TABLE IF NOT EXISTS task_resources (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  task_id UUID REFERENCES tasks(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  title TEXT NOT NULL,
+  url TEXT NOT NULL,
+  description TEXT,
+  type TEXT CHECK (type IN ('video', 'article', 'blog', 'other')) NOT NULL,
+  thumbnail_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- =============================================
 -- ANALYTICS TABLES
 -- =============================================
@@ -249,6 +263,11 @@ CREATE INDEX IF NOT EXISTS task_steps_user_id_idx ON task_steps (user_id);
 CREATE INDEX IF NOT EXISTS task_steps_order_index_idx ON task_steps (order_index);
 CREATE INDEX IF NOT EXISTS task_steps_is_completed_idx ON task_steps (is_completed);
 
+-- Indexes for task_resources
+CREATE INDEX IF NOT EXISTS task_resources_task_id_idx ON task_resources (task_id);
+CREATE INDEX IF NOT EXISTS task_resources_user_id_idx ON task_resources (user_id);
+CREATE INDEX IF NOT EXISTS task_resources_type_idx ON task_resources (type);
+
 -- Analytics table indexes
 CREATE INDEX IF NOT EXISTS analytics_daily_user_id_idx ON analytics_daily(user_id);
 CREATE INDEX IF NOT EXISTS analytics_daily_date_idx ON analytics_daily(date);
@@ -285,6 +304,7 @@ ALTER TABLE task_shares ENABLE ROW LEVEL SECURITY;
 ALTER TABLE task_share_activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE task_chats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE task_steps ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_resources ENABLE ROW LEVEL SECURITY;
 
 -- =============================================
 -- FUNCTIONS AND TRIGGERS
@@ -848,3 +868,64 @@ $$ LANGUAGE plpgsql;
 
 -- Grant permission to use the function
 GRANT EXECUTE ON FUNCTION refresh_task_progress(UUID) TO authenticated;
+
+-- Policies for task_resources
+DROP POLICY IF EXISTS "Users can view their own task resources" ON task_resources;
+DROP POLICY IF EXISTS "Users can view resources for tasks they have access to" ON task_resources;
+CREATE POLICY "Users can view resources for tasks they have access to"
+ON task_resources FOR SELECT
+USING (
+  user_id = auth.uid() OR
+  EXISTS (
+    SELECT 1 FROM tasks
+    WHERE tasks.id = task_resources.task_id
+    AND tasks.user_id = auth.uid()
+  ) OR
+  EXISTS (
+    SELECT 1 FROM task_shares
+    WHERE task_shares.task_id = task_resources.task_id
+    AND task_shares.shared_with_id = auth.uid()
+    AND task_shares.status = 'accepted'
+  )
+);
+
+DROP POLICY IF EXISTS "Users can insert their own task resources" ON task_resources;
+DROP POLICY IF EXISTS "Users can insert resources for tasks they have access to" ON task_resources;
+CREATE POLICY "Users can insert resources for tasks they have access to"
+ON task_resources FOR INSERT
+WITH CHECK (
+  auth.uid() = user_id AND (
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_resources.task_id
+      AND tasks.user_id = auth.uid()
+    ) OR
+    EXISTS (
+      SELECT 1 FROM task_shares
+      WHERE task_shares.task_id = task_resources.task_id
+      AND task_shares.shared_with_id = auth.uid()
+      AND task_shares.status = 'accepted'
+      AND task_shares.permission_level IN ('edit', 'admin')
+    )
+  )
+);
+
+DROP POLICY IF EXISTS "Users can update their own task resources" ON task_resources;
+DROP POLICY IF EXISTS "Users can update resources for tasks they have access to" ON task_resources;
+CREATE POLICY "Users can update resources for tasks they have access to"
+ON task_resources FOR UPDATE
+USING (
+  auth.uid() = user_id OR
+  EXISTS (
+    SELECT 1 FROM task_shares
+    WHERE task_shares.task_id = task_resources.task_id
+    AND task_shares.shared_with_id = auth.uid()
+    AND task_shares.status = 'accepted'
+    AND task_shares.permission_level IN ('edit', 'admin')
+  )
+);
+
+DROP POLICY IF EXISTS "Users can delete their own task resources" ON task_resources;
+CREATE POLICY "Users can delete their own task resources"
+ON task_resources FOR DELETE
+USING (auth.uid() = user_id);

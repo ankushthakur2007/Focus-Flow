@@ -22,6 +22,8 @@ export interface Task {
   };
   steps?: TaskStep[]; // Optional array of steps
   task_steps?: TaskStep[]; // Optional array of steps from Supabase join
+  resources?: TaskResource[]; // Optional array of resources
+  task_resources?: TaskResource[]; // Optional array of resources from Supabase join
 }
 
 export interface TaskShare {
@@ -75,6 +77,19 @@ export interface TaskStep {
   description?: string;
   is_completed: boolean;
   order_index: number;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface TaskResource {
+  id: string;
+  task_id: string;
+  user_id: string;
+  title: string;
+  url: string;
+  description?: string;
+  type: 'video' | 'article' | 'blog' | 'other';
+  thumbnail_url?: string;
   created_at: string;
   updated_at?: string;
 }

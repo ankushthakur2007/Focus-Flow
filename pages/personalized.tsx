@@ -6,12 +6,15 @@ import { Mood } from '../types/mood';
 import { Recommendation } from '../types/recommendation';
 import { getRecommendation, getTaskRecommendation } from '../services/gemini';
 import RecommendationCard from '../components/RecommendationCard';
+import TaskResourcesCard from '../components/TaskResourcesCard';
 import ResponsiveContainer from '../components/ResponsiveContainer';
 import TouchFriendlyButton from '../components/TouchFriendlyButton';
 
 const PersonalizedPage = () => {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadingTasks, setLoadingTasks] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const { user } = useContext(AuthContext);
 
@@ -204,9 +207,36 @@ const PersonalizedPage = () => {
     }
   };
 
+  // Fetch tasks for resources
+  const fetchTasks = async () => {
+    if (!user) return;
+
+    setLoadingTasks(true);
+
+    try {
+      // Get user's tasks
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('tasks')
+        .select('*, task_resources(*)')
+        .neq('status', 'completed')
+        .order('status', { ascending: true })
+        .order('created_at', { ascending: false })
+        .limit(6);
+
+      if (tasksError) throw tasksError;
+
+      setTasks(tasksData || []);
+    } catch (error) {
+      console.error('Error fetching tasks for resources:', error);
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchRecommendations();
+      fetchTasks();
     }
   }, [user]);
 
@@ -309,54 +339,103 @@ const PersonalizedPage = () => {
         </TouchFriendlyButton>
       </div>
 
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500 mb-4"></div>
-          <p className="text-gray-500 dark:text-gray-400">Analyzing your tasks and mood...</p>
-        </div>
-      ) : error ? (
-        <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-          <div className="text-red-500 mb-6 text-lg">{error}</div>
-          <p className="mb-6 text-gray-600 dark:text-gray-400">
-            There was a problem connecting to the AI service. Please check your connection and try again.
-          </p>
-          <button
-            className="btn btn-primary"
-            onClick={() => fetchRecommendations(true)}
+      {/* Recommendations Section */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Task Recommendations</h2>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500 mb-4"></div>
+            <p className="text-gray-500 dark:text-gray-400">Analyzing your tasks and mood...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+            <div className="text-red-500 mb-6 text-lg">{error}</div>
+            <p className="mb-6 text-gray-600 dark:text-gray-400">
+              There was a problem connecting to the AI service. Please check your connection and try again.
+            </p>
+            <button
+              className="btn btn-primary"
+              onClick={() => fetchRecommendations(true)}
+            >
+              Try Again
+            </button>
+          </div>
+        ) : recommendations.length > 0 ? (
+          <div className="responsive-grid">
+            {recommendations.map(recommendation => (
+              <RecommendationCard
+                key={recommendation.task_id || recommendation.id}
+                recommendation={recommendation}
+                onRefresh={() => recommendation.task_id
+                  ? refreshSingleRecommendation(recommendation.task_id)
+                  : fetchRecommendations(true)
+                }
+                loading={loading}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            <p className="text-gray-500 dark:text-gray-400 mb-4">
+              No recommendations available
+            </p>
+            <button
+              className="btn btn-primary"
+              onClick={() => fetchRecommendations(true)}
+            >
+              Generate Recommendations
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Learning Resources Section */}
+      <div>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <h2 className="text-xl font-semibold">Learning Resources</h2>
+          <TouchFriendlyButton
+            className="btn btn-primary w-full sm:w-auto"
+            onClick={fetchTasks}
+            disabled={loadingTasks}
+            ariaLabel="Refresh resources"
           >
-            Try Again
-          </button>
+            <span className="flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 sm:h-5 sm:w-5 mr-2 sm:mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+              </svg>
+              {loadingTasks ? 'Loading...' : 'Refresh Resources'}
+            </span>
+          </TouchFriendlyButton>
         </div>
-      ) : recommendations.length > 0 ? (
-        <div className="responsive-grid">
-          {recommendations.map(recommendation => (
-            <RecommendationCard
-              key={recommendation.task_id || recommendation.id}
-              recommendation={recommendation}
-              onRefresh={() => recommendation.task_id
-                ? refreshSingleRecommendation(recommendation.task_id)
-                : fetchRecommendations(true)
-              }
-              loading={loading}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-          </svg>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">
-            No recommendations available
-          </p>
-          <button
-            className="btn btn-primary"
-            onClick={() => fetchRecommendations(true)}
-          >
-            Generate Recommendations
-          </button>
-        </div>
-      )}
+
+        {loadingTasks ? (
+          <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500 mb-4"></div>
+            <p className="text-gray-500 dark:text-gray-400">Loading task resources...</p>
+          </div>
+        ) : tasks.length > 0 ? (
+          <div className="responsive-grid">
+            {tasks.map(task => (
+              <TaskResourcesCard key={task.id} task={task} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+            <p className="text-gray-500 dark:text-gray-400 mb-4">
+              No tasks available for resources
+            </p>
+            <a href="/tasks" className="btn btn-primary">
+              Create Tasks
+            </a>
+          </div>
+        )}
+      </div>
 
       {/* Fixed Refresh Button for Mobile */}
       {recommendations.length > 0 && (

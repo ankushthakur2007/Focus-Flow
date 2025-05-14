@@ -1,10 +1,12 @@
 import { useState, useContext, useEffect } from 'react';
-import { Task } from '../types/task';
+import { Task, TaskResource } from '../types/task';
 import { format, parseISO } from 'date-fns';
 import TaskRecommendation from './TaskRecommendation';
 import TaskBreakdownModal from './TaskBreakdownModal';
+import ResourcesSection from './ResourcesSection';
 import AuthContext from './AuthContext';
 import { supabase } from '../services/supabase';
+import { fetchTaskResources, refreshTaskResources } from '../services/taskResources';
 
 interface TaskCardProps {
   task: Task;
@@ -21,6 +23,10 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
   );
   const [isUpdating, setIsUpdating] = useState(false);
   const [showBreakdownModal, setShowBreakdownModal] = useState(false);
+
+  // Resources state
+  const [resources, setResources] = useState<TaskResource[]>([]);
+  const [isLoadingResources, setIsLoadingResources] = useState(false);
 
   // Ensure notification settings are properly initialized
   useEffect(() => {
@@ -61,6 +67,25 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
     };
 
     initializeNotificationSettings();
+  }, [task.id, user]);
+
+  // Fetch resources for the task
+  useEffect(() => {
+    const getResources = async () => {
+      if (!user || !task.id) return;
+
+      try {
+        setIsLoadingResources(true);
+        const taskResources = await fetchTaskResources(task.id);
+        setResources(taskResources);
+      } catch (error) {
+        console.error('Error fetching task resources:', error);
+      } finally {
+        setIsLoadingResources(false);
+      }
+    };
+
+    getResources();
   }, [task.id, user]);
 
   // Update notification settings in the database
@@ -173,6 +198,21 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
     }
   };
 
+  // Handle refreshing resources for the task
+  const handleRefreshResources = async () => {
+    if (!user || !task.id) return;
+
+    try {
+      setIsLoadingResources(true);
+      const refreshedResources = await refreshTaskResources(task, user.id);
+      setResources(refreshedResources);
+    } catch (error) {
+      console.error('Error refreshing task resources:', error);
+    } finally {
+      setIsLoadingResources(false);
+    }
+  };
+
   const handleTaskUpdate = async () => {
     // Refresh the task data after steps are added/updated
     try {
@@ -181,7 +221,7 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
       // First, get the latest task data with steps
       const { data: updatedTaskData, error: taskError } = await supabase
         .from('tasks')
-        .select('*, task_steps(*)')
+        .select('*, task_steps(*), task_resources(*)')
         .eq('id', task.id)
         .single();
 
@@ -202,6 +242,11 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
         Object.keys(updatedTask).forEach(key => {
           (task as any)[key] = updatedTask[key];
         });
+
+        // Update resources if they exist in the updated task data
+        if (updatedTaskData.task_resources) {
+          setResources(updatedTaskData.task_resources);
+        }
 
         console.log('Task object after update:', task);
       }
@@ -377,6 +422,15 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
         {/* AI Recommendation */}
         <div className="px-4 py-3">
           <TaskRecommendation taskId={task.id} />
+        </div>
+
+        {/* Resources Section */}
+        <div className="px-4 py-3">
+          <ResourcesSection
+            resources={resources}
+            isLoading={isLoadingResources}
+            onRefresh={handleRefreshResources}
+          />
         </div>
 
         {/* Actions */}
