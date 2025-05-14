@@ -274,8 +274,10 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
       setShowAIResults(false);
       setHasUnsavedChanges(true);
 
-      // Save changes to database
+      // Save changes to database and wait for it to complete
+      console.log('Saving AI-generated steps to database...');
       await saveChanges();
+      console.log('AI-generated steps saved successfully');
 
       // Mark steps as finalized
       const { error: finalizeError } = await supabase
@@ -344,11 +346,15 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
       }));
 
       if (newSteps.length > 0) {
-        const { error: insertError } = await supabase
+        console.log(`Inserting ${newSteps.length} new steps:`, newSteps);
+        const { data: insertedData, error: insertError } = await supabase
           .from('task_steps')
-          .insert(newSteps);
+          .insert(newSteps)
+          .select();
 
         if (insertError) throw insertError;
+
+        console.log('Steps inserted successfully:', insertedData);
       }
 
       // 2. Update modified steps
@@ -392,6 +398,7 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
       }
 
       // 4. Fetch updated steps
+      console.log('Fetching updated steps for task:', task.id);
       const { data: updatedSteps, error: fetchError } = await supabase
         .from('task_steps')
         .select('*')
@@ -399,6 +406,8 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
         .order('order_index', { ascending: true });
 
       if (fetchError) throw fetchError;
+
+      console.log('Fetched updated steps:', updatedSteps);
 
       // 5. Update local state
       setSteps(updatedSteps || []);

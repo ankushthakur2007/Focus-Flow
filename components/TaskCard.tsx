@@ -176,16 +176,25 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
   const handleTaskUpdate = async () => {
     // Refresh the task data after steps are added/updated
     try {
+      console.log('Refreshing task data for task:', task.id);
+
       // First, get the latest task data
       const { data: updatedTaskData, error: taskError } = await supabase
         .from('tasks')
-        .select('*')
+        .select('*, steps:task_steps(*)')
         .eq('id', task.id)
         .single();
 
       if (taskError) {
         console.error('Error fetching updated task:', taskError);
         return;
+      }
+
+      console.log('Updated task data:', updatedTaskData);
+
+      // Update task object with the latest data
+      if (updatedTaskData) {
+        Object.assign(task, updatedTaskData);
       }
 
       // Update the status in the UI to match the database
