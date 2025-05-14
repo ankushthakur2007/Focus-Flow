@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   status TEXT CHECK (status IN ('pending', 'in_progress', 'completed')) DEFAULT 'pending',
   start_date TIMESTAMP WITH TIME ZONE,
   due_date TIMESTAMP WITH TIME ZONE,
+  progress INTEGER DEFAULT 0,
   notification_settings JSONB DEFAULT '{
     "custom_reminder": false,
     "reminder_time": 24,
@@ -66,6 +67,19 @@ CREATE TABLE IF NOT EXISTS task_chats (
   message TEXT NOT NULL,
   is_user BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create task_steps table to store individual steps for each task
+CREATE TABLE IF NOT EXISTS task_steps (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  task_id UUID REFERENCES tasks(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  is_completed BOOLEAN DEFAULT false,
+  order_index INTEGER NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- =============================================
@@ -219,11 +233,16 @@ CREATE INDEX IF NOT EXISTS tasks_status_idx ON tasks (status);
 CREATE INDEX IF NOT EXISTS tasks_created_at_idx ON tasks (created_at);
 CREATE INDEX IF NOT EXISTS tasks_start_date_idx ON tasks (start_date);
 CREATE INDEX IF NOT EXISTS tasks_due_date_idx ON tasks (due_date);
+CREATE INDEX IF NOT EXISTS tasks_progress_idx ON tasks (progress);
 CREATE INDEX IF NOT EXISTS moods_user_id_idx ON moods (user_id);
 CREATE INDEX IF NOT EXISTS moods_timestamp_idx ON moods (timestamp);
 CREATE INDEX IF NOT EXISTS recommendations_user_id_idx ON recommendations (user_id);
 CREATE INDEX IF NOT EXISTS recommendations_task_id_idx ON recommendations (task_id);
 CREATE INDEX IF NOT EXISTS recommendations_created_at_idx ON recommendations (created_at);
+CREATE INDEX IF NOT EXISTS task_steps_task_id_idx ON task_steps (task_id);
+CREATE INDEX IF NOT EXISTS task_steps_user_id_idx ON task_steps (user_id);
+CREATE INDEX IF NOT EXISTS task_steps_order_index_idx ON task_steps (order_index);
+CREATE INDEX IF NOT EXISTS task_steps_is_completed_idx ON task_steps (is_completed);
 
 -- Analytics table indexes
 CREATE INDEX IF NOT EXISTS analytics_daily_user_id_idx ON analytics_daily(user_id);
@@ -260,6 +279,7 @@ ALTER TABLE analytics_weekly ENABLE ROW LEVEL SECURITY;
 ALTER TABLE task_shares ENABLE ROW LEVEL SECURITY;
 ALTER TABLE task_share_activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE task_chats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_steps ENABLE ROW LEVEL SECURITY;
 
 -- =============================================
 -- FUNCTIONS AND TRIGGERS
@@ -315,6 +335,48 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Function to calculate task progress based on steps
+DROP FUNCTION IF EXISTS calculate_task_progress() CASCADE;
+CREATE OR REPLACE FUNCTION calculate_task_progress()
+RETURNS TRIGGER AS $$
+DECLARE
+  total_steps INTEGER;
+  completed_steps INTEGER;
+  progress_percentage INTEGER;
+BEGIN
+  -- Count total steps for the task
+  SELECT COUNT(*) INTO total_steps
+  FROM task_steps
+  WHERE task_id = NEW.task_id;
+
+  -- Count completed steps for the task
+  SELECT COUNT(*) INTO completed_steps
+  FROM task_steps
+  WHERE task_id = NEW.task_id AND is_completed = true;
+
+  -- Calculate progress percentage
+  IF total_steps > 0 THEN
+    progress_percentage := (completed_steps * 100) / total_steps;
+  ELSE
+    progress_percentage := 0;
+  END IF;
+
+  -- Update the task's progress
+  UPDATE tasks
+  SET
+    progress = progress_percentage,
+    -- If all steps are completed, mark the task as completed
+    status = CASE
+      WHEN progress_percentage = 100 THEN 'completed'
+      ELSE status
+    END,
+    updated_at = NOW()
+  WHERE id = NEW.task_id;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Trigger for task changes to update analytics
 DROP TRIGGER IF EXISTS trigger_update_analytics_on_task_change ON tasks;
 CREATE TRIGGER trigger_update_analytics_on_task_change
@@ -362,6 +424,25 @@ CREATE TRIGGER task_share_delete_trigger
 AFTER DELETE ON task_shares
 FOR EACH ROW
 EXECUTE FUNCTION log_task_activity();
+
+-- Triggers for task steps to update task progress
+DROP TRIGGER IF EXISTS update_task_progress_on_step_insert ON task_steps;
+CREATE TRIGGER update_task_progress_on_step_insert
+AFTER INSERT ON task_steps
+FOR EACH ROW
+EXECUTE FUNCTION calculate_task_progress();
+
+DROP TRIGGER IF EXISTS update_task_progress_on_step_update ON task_steps;
+CREATE TRIGGER update_task_progress_on_step_update
+AFTER UPDATE OF is_completed ON task_steps
+FOR EACH ROW
+EXECUTE FUNCTION calculate_task_progress();
+
+DROP TRIGGER IF EXISTS update_task_progress_on_step_delete ON task_steps;
+CREATE TRIGGER update_task_progress_on_step_delete
+AFTER DELETE ON task_steps
+FOR EACH ROW
+EXECUTE FUNCTION calculate_task_progress();
 
 -- =============================================
 -- POLICIES
@@ -609,6 +690,26 @@ USING (
   )
 );
 
+-- Policies for task_steps
+DROP POLICY IF EXISTS "Users can view their own task steps" ON task_steps;
+DROP POLICY IF EXISTS "Users can view their own and shared task steps" ON task_steps;
+CREATE POLICY "Users can view their own and shared task steps"
+ON task_steps FOR SELECT
+USING (
+  auth.uid() = user_id OR
+  EXISTS (
+    SELECT 1 FROM task_shares
+    WHERE task_shares.task_id = task_steps.task_id
+    AND task_shares.shared_with_id = auth.uid()
+    AND task_shares.status = 'accepted'
+  ) OR
+  EXISTS (
+    SELECT 1 FROM tasks
+    WHERE tasks.id = task_steps.task_id
+    AND tasks.user_id = auth.uid()
+  )
+);
+
 DROP POLICY IF EXISTS "Users can insert their own task chats" ON task_chats;
 DROP POLICY IF EXISTS "Users can insert chats for tasks they have access to" ON task_chats;
 CREATE POLICY "Users can insert chats for tasks they have access to"
@@ -632,6 +733,48 @@ WITH CHECK (
 DROP POLICY IF EXISTS "Users can delete their own task chats" ON task_chats;
 CREATE POLICY "Users can delete their own task chats"
 ON task_chats FOR DELETE
+USING (auth.uid() = user_id);
+
+-- Policies for task steps
+DROP POLICY IF EXISTS "Users can insert their own task steps" ON task_steps;
+DROP POLICY IF EXISTS "Users can insert steps for tasks they have access to" ON task_steps;
+CREATE POLICY "Users can insert steps for tasks they have access to"
+ON task_steps FOR INSERT
+WITH CHECK (
+  auth.uid() = user_id AND (
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_steps.task_id
+      AND tasks.user_id = auth.uid()
+    ) OR
+    EXISTS (
+      SELECT 1 FROM task_shares
+      WHERE task_shares.task_id = task_steps.task_id
+      AND task_shares.shared_with_id = auth.uid()
+      AND task_shares.status = 'accepted'
+      AND task_shares.permission_level IN ('edit', 'admin')
+    )
+  )
+);
+
+DROP POLICY IF EXISTS "Users can update their own task steps" ON task_steps;
+DROP POLICY IF EXISTS "Users can update steps for tasks they have access to" ON task_steps;
+CREATE POLICY "Users can update steps for tasks they have access to"
+ON task_steps FOR UPDATE
+USING (
+  auth.uid() = user_id OR
+  EXISTS (
+    SELECT 1 FROM task_shares
+    WHERE task_shares.task_id = task_steps.task_id
+    AND task_shares.shared_with_id = auth.uid()
+    AND task_shares.status = 'accepted'
+    AND task_shares.permission_level IN ('edit', 'admin')
+  )
+);
+
+DROP POLICY IF EXISTS "Users can delete their own task steps" ON task_steps;
+CREATE POLICY "Users can delete their own task steps"
+ON task_steps FOR DELETE
 USING (auth.uid() = user_id);
 
 -- Grant permissions for the views

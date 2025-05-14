@@ -2,6 +2,7 @@ import { useState, useContext, useEffect } from 'react';
 import { Task } from '../types/task';
 import { format, parseISO } from 'date-fns';
 import TaskRecommendation from './TaskRecommendation';
+import TaskBreakdownModal from './TaskBreakdownModal';
 import AuthContext from './AuthContext';
 import { supabase } from '../services/supabase';
 
@@ -19,6 +20,7 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
     task.notification_settings?.notifications_enabled !== false // Default to true if not explicitly set to false
   );
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showBreakdownModal, setShowBreakdownModal] = useState(false);
 
   // Ensure notification settings are properly initialized
   useEffect(() => {
@@ -171,8 +173,22 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
     }
   };
 
+  const handleTaskUpdate = () => {
+    // Refresh the task data after steps are added/updated
+    onStatusChange(task.id, task.status);
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+      {/* Task Breakdown Modal */}
+      {showBreakdownModal && (
+        <TaskBreakdownModal
+          task={task}
+          onClose={() => setShowBreakdownModal(false)}
+          onUpdate={handleTaskUpdate}
+        />
+      )}
+
       {/* Card Header */}
       <div className="p-4 flex flex-col sm:flex-row justify-between items-start gap-3">
         <div className="flex items-start space-x-3 w-full">
@@ -206,6 +222,16 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
                   </svg>
                   <span className={`text-xs ${new Date(task.due_date) < new Date() ? 'text-red-500 font-medium' : 'text-gray-600 dark:text-gray-400'}`}>
                     Due: {format(parseISO(task.due_date), 'MMM d')}
+                  </span>
+                </div>
+              )}
+              {task.progress !== undefined && task.progress > 0 && (
+                <div className="flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-primary-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
+                    {task.progress}% Complete
                   </span>
                 </div>
               )}
@@ -319,6 +345,26 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
           </div>
 
           <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
+            <button
+              onClick={() => setShowBreakdownModal(true)}
+              className="text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 flex items-center px-3 py-1 rounded-md hover:bg-primary-50 dark:hover:bg-gray-700 transition-colors"
+              title="Break down task into steps"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 mr-1"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span className="hidden sm:inline">Breakdown</span>
+            </button>
+
             <a
               href={`/chat/${task.id}`}
               className="text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 flex items-center px-3 py-1 rounded-md hover:bg-primary-50 dark:hover:bg-gray-700 transition-colors"

@@ -10,7 +10,11 @@ interface RecommendationResponse {
   mood_tip: string;
   priority_level?: string;
   estimated_time?: string;
-  steps?: string[];
+  steps?: string[] | {title: string, description: string}[];
+}
+
+interface TaskStepSuggestionResponse {
+  steps: {title: string, description: string}[];
 }
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
@@ -86,6 +90,103 @@ export const getRecommendation = async (
       reasoning: 'The AI service is currently unavailable.',
       suggestion: 'Please try again later. You can also check your API key configuration.',
       mood_tip: 'In the meantime, consider picking a task that aligns with your energy level right now.',
+    };
+  }
+};
+
+export const getTaskStepSuggestions = async (
+  task: Task,
+  currentMood: string,
+  questions: string[],
+  answers: string[]
+): Promise<TaskStepSuggestionResponse> => {
+  try {
+    // Create a prompt for the AI
+    const prompt = createTaskStepsPrompt(task, currentMood, questions, answers);
+
+    // Make the API request
+    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: prompt }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1024,
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini API error:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('Gemini API task steps response:', data);
+
+    // Extract the text from the response
+    const aiResponse = data.candidates[0].content.parts[0].text;
+
+    // Parse the JSON response from the AI
+    try {
+      const jsonStart = aiResponse.indexOf('{');
+      const jsonEnd = aiResponse.lastIndexOf('}') + 1;
+
+      if (jsonStart >= 0 && jsonEnd > jsonStart) {
+        const jsonString = aiResponse.substring(jsonStart, jsonEnd);
+        const result = JSON.parse(jsonString) as TaskStepSuggestionResponse;
+        return result;
+      }
+    } catch (e) {
+      console.error('Error parsing AI task steps response as JSON:', e);
+    }
+
+    // Fallback if JSON parsing fails
+    return {
+      steps: [
+        {
+          title: "Break down the task",
+          description: "Divide the task into smaller, manageable parts"
+        },
+        {
+          title: "Set a timeline",
+          description: "Establish deadlines for each part of the task"
+        },
+        {
+          title: "Start with the easiest part",
+          description: "Build momentum by completing simpler components first"
+        }
+      ]
+    };
+  } catch (error) {
+    console.error('Error getting task step suggestions:', error);
+
+    // Return fallback steps instead of throwing
+    return {
+      steps: [
+        {
+          title: "Break down the task",
+          description: "Divide the task into smaller, manageable parts"
+        },
+        {
+          title: "Set a timeline",
+          description: "Establish deadlines for each part of the task"
+        },
+        {
+          title: "Start with the easiest part",
+          description: "Build momentum by completing simpler components first"
+        }
+      ]
     };
   }
 };
@@ -245,6 +346,63 @@ Consider the following in your recommendation:
 5. Time of day and potential energy levels
 
 If there are no tasks, suggest creating a new task based on the user's mood and historical patterns.
+`;
+};
+
+const createTaskStepsPrompt = (
+  task: Task,
+  currentMood: string,
+  questions: string[],
+  answers: string[]
+): string => {
+  // Combine questions and answers
+  const userInput = questions.map((question, index) => {
+    return `Q: ${question}\nA: ${answers[index] || 'No answer provided'}`;
+  }).join('\n\n');
+
+  // Create the prompt
+  return `
+You are an AI assistant for a productivity app called FocusFlow. Based on the user's task details, current mood, and their answers to specific questions, generate a detailed breakdown of steps to complete this task.
+
+Task Details:
+Title: ${task.title}
+Description: ${task.description || 'No description provided'}
+Priority: ${task.priority}
+Category: ${task.category}
+Status: ${task.status}
+
+Current Mood: ${currentMood}
+
+User's Input:
+${userInput}
+
+Please generate a detailed, step-by-step breakdown for completing this task. Each step should be clear, actionable, and tailored to the specific task and user's current situation.
+
+Return your response in the following JSON format:
+{
+  "steps": [
+    {
+      "title": "Step 1 title",
+      "description": "Detailed description of what to do in this step"
+    },
+    {
+      "title": "Step 2 title",
+      "description": "Detailed description of what to do in this step"
+    },
+    ...
+  ]
+}
+
+Guidelines:
+1. Provide 3-7 steps, depending on the complexity of the task
+2. Make each step specific and actionable
+3. Consider the user's current mood and energy level
+4. Include any preparation or planning steps needed
+5. Break down complex parts into smaller, manageable tasks
+6. Include a final verification or completion step
+7. Tailor the steps to the specific task category (work, study, etc.)
+
+Make your steps practical, clear, and helpful for the user to make progress on their task.
 `;
 };
 

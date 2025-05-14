@@ -8,6 +8,7 @@ export interface Task {
   status: 'pending' | 'in_progress' | 'completed';
   start_date?: string; // Optional start date for tasks
   due_date?: string; // Optional due date for tasks
+  progress?: number; // Progress percentage based on completed steps
   created_at: string;
   updated_at?: string;
   is_shared?: boolean;
@@ -18,6 +19,7 @@ export interface Task {
     reminder_sent: boolean;
     notifications_enabled: boolean;
   };
+  steps?: TaskStep[]; // Optional array of steps
 }
 
 export interface TaskShare {
@@ -61,4 +63,16 @@ export interface SharedUser {
   name?: string;
   permission_level: 'view' | 'edit' | 'admin';
   status: 'pending' | 'accepted' | 'rejected';
+}
+
+export interface TaskStep {
+  id: string;
+  task_id: string;
+  user_id: string;
+  title: string;
+  description?: string;
+  is_completed: boolean;
+  order_index: number;
+  created_at: string;
+  updated_at?: string;
 }
