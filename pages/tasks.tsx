@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import { supabase } from '../services/supabase';
 import AuthContext from '../components/AuthContext';
 import TaskCard from '../components/TaskCard';
-import TaskForm from '../components/TaskForm';
+import TaskFormModal from '../components/TaskFormModal';
 import { Task } from '../types/task';
 import { getTaskRecommendation } from '../services/gemini';
 import { findAndSaveTaskResources } from '../services/taskResources';
@@ -218,9 +218,7 @@ const TasksPage = () => {
       </div>
 
       {showForm && (
-        <div className="mb-6">
-          <TaskForm onSubmit={handleAddTask} onCancel={() => setShowForm(false)} />
-        </div>
+        <TaskFormModal onSubmit={handleAddTask} onClose={() => setShowForm(false)} />
       )}
 
       {/* Status Filter */}
