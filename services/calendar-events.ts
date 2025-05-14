@@ -49,8 +49,8 @@ export const fetchMonthEvents = async (date: Date): Promise<CalendarEvent[]> => 
  * @returns Array of calendar events
  */
 export const fetchWeekEvents = async (date: Date): Promise<CalendarEvent[]> => {
-  const start = startOfWeek(date, { weekStartsOn: 1 }); // Start week on Monday
-  const end = endOfWeek(date, { weekStartsOn: 1 });
+  const start = startOfWeek(date, { weekStartsOn: 0 }); // Start week on Sunday to match calendar view
+  const end = endOfWeek(date, { weekStartsOn: 0 });
   return fetchCalendarEvents(start, end);
 };
 

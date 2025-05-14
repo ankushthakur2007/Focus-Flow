@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import AuthContext from '../components/AuthContext';
 import Layout from '../components/Layout';
-import { fetchMonthEvents, fetchWeekEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '../services/calendar-events';
+import { fetchCalendarEvents, fetchMonthEvents, fetchWeekEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '../services/calendar-events';
 import { CalendarEvent } from '../types/calendar';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths,
   parseISO, isSameDay, isSameMonth, isToday, getDay, getDate } from 'date-fns';
@@ -49,7 +49,7 @@ export default function Calendar() {
         start.setHours(0, 0, 0, 0);
         const end = new Date(currentDate);
         end.setHours(23, 59, 59, 999);
-        data = await fetchMonthEvents(currentDate);
+        data = await fetchCalendarEvents(start, end);
       }
       setEvents(data);
       setError(null);
@@ -296,7 +296,8 @@ export default function Calendar() {
                 style={{
                   backgroundColor: event.color || '#3b82f6',
                   top: `${(parseISO(event.start_time).getMinutes() / 60) * 100}%`,
-                  height: '50px'
+                  height: '50px',
+                  zIndex: 10
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -377,7 +378,8 @@ export default function Calendar() {
                 style={{
                   backgroundColor: event.color || '#3b82f6',
                   top: `${(parseISO(event.start_time).getMinutes() / 60) * 100}%`,
-                  height: '50px'
+                  height: '50px',
+                  zIndex: 10
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
