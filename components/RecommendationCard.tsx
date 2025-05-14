@@ -142,7 +142,18 @@ const RecommendationCard = ({ recommendation, onRefresh, loading }: Recommendati
             <div className={`px-4 pb-4 ${expandedSections.steps ? 'block' : 'hidden'}`}>
               <ol className="list-decimal pl-5 space-y-2 text-gray-600 dark:text-gray-400">
                 {recommendation.steps.map((step, index) => (
-                  <li key={index} className="pl-1">{step}</li>
+                  <li key={index} className="pl-1">
+                    {typeof step === 'string' ? (
+                      step
+                    ) : (
+                      <div>
+                        <div className="font-medium">{step.title}</div>
+                        {step.description && (
+                          <div className="text-sm mt-1">{step.description}</div>
+                        )}
+                      </div>
+                    )}
+                  </li>
                 ))}
               </ol>
             </div>

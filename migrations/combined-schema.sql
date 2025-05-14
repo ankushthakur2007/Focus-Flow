@@ -56,6 +56,9 @@ CREATE TABLE IF NOT EXISTS recommendations (
   suggestion TEXT,
   mood_tip TEXT,
   mood TEXT,
+  priority_level TEXT,
+  estimated_time TEXT,
+  steps JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

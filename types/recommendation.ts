@@ -9,6 +9,6 @@ export interface Recommendation {
   mood: string;
   priority_level?: string;
   estimated_time?: string;
-  steps?: string[];
+  steps?: string[] | {title: string, description: string}[];
   created_at?: string;
 }
