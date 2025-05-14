@@ -154,90 +154,42 @@ interface ResourceCardProps {
 }
 
 const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
-  const [expanded, setExpanded] = useState(false);
-
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-      {/* Card Header - Always visible */}
-      <div
-        className="cursor-pointer"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <div className="aspect-square relative overflow-hidden bg-gray-100 dark:bg-gray-800">
-          {resource.thumbnail_url ? (
-            <img
-              src={resource.thumbnail_url}
-              alt={resource.title}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-primary-50 dark:bg-primary-900/20">
-              <span className="text-4xl">
-                {resource.type === 'video' ? '🎬' : resource.type === 'blog' ? '📝' : '📄'}
-              </span>
-            </div>
-          )}
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
-            <h5 className="font-medium text-white truncate">
-              {resource.title}
-            </h5>
-            <div className="text-xs text-gray-200 truncate">
-              {new URL(resource.url).hostname}
-            </div>
+    <a
+      href={resource.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
+    >
+      <div className="aspect-square relative overflow-hidden bg-gray-100 dark:bg-gray-800">
+        {resource.thumbnail_url ? (
+          <img
+            src={resource.thumbnail_url}
+            alt={resource.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-primary-50 dark:bg-primary-900/20">
+            <span className="text-4xl">
+              {resource.type === 'video' ? '🎬' : resource.type === 'blog' ? '📝' : '📄'}
+            </span>
+          </div>
+        )}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+          <h5 className="font-medium text-white truncate">
+            {resource.title}
+          </h5>
+          <div className="text-xs text-gray-200 truncate">
+            {new URL(resource.url).hostname}
           </div>
         </div>
       </div>
-
-      {/* Expanded Content */}
-      {expanded && (
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-          <div className="mb-3">
-            <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
-              {resource.title}
-            </h6>
-            {resource.description && (
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                {resource.description}
-              </p>
-            )}
-          </div>
-
-          {/* Resource Type Section */}
-          <div className="mb-3">
-            <div className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
-              Type
-            </div>
-            <div className="flex items-center">
-              <span className="mr-2">
-                {resource.type === 'video' ? '🎬' : resource.type === 'blog' ? '📝' : '📄'}
-              </span>
-              <span className="text-sm capitalize">
-                {resource.type}
-              </span>
-            </div>
-          </div>
-
-          {/* Source Section */}
-          <div className="mb-4">
-            <div className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
-              Source
-            </div>
-            <div className="text-sm">
-              {new URL(resource.url).hostname}
-            </div>
-          </div>
-
-          <a
-            href={resource.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block px-4 py-2 bg-primary-600 text-white text-sm rounded hover:bg-primary-700 transition-colors"
-          >
-            Visit Resource
-          </a>
-        </div>
-      )}
-    </div>
+      <div className="p-2 bg-white dark:bg-gray-800 text-center">
+        <span className="text-xs font-medium px-2 py-1 rounded-full bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200">
+          {resource.type.charAt(0).toUpperCase() + resource.type.slice(1)}
+        </span>
+      </div>
+    </a>
   );
 };
 
