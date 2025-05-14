@@ -3,10 +3,18 @@ import { Task } from '../types/task';
 import { Mood } from '../types/mood';
 import {
   subDays, parseISO, format, startOfDay, endOfDay,
-  isWithinInterval, startOfWeek, endOfWeek, addDays
+  isWithinInterval, startOfWeek, endOfWeek, addDays,
+  getDay, getHours
 } from 'date-fns';
 
 type TimeRange = '7days' | '30days' | '90days' | 'all';
+
+// Define interface for productivity insights
+export interface ProductivityInsight {
+  text: string;
+  type: 'productivity' | 'time' | 'category' | 'mood' | 'general';
+  recommendation?: string;
+}
 
 // Define interfaces for analytics data
 export interface DailyAnalytics {
@@ -497,4 +505,304 @@ export const getMostProductiveDay = (tasks: Task[]): string => {
   });
 
   return mostProductiveDay;
+};
+
+/**
+ * Fetch productivity insights from the database
+ */
+export const fetchProductivityInsights = async (timeRange: TimeRange): Promise<ProductivityInsight[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('productivity_insights')
+      .select('*')
+      .eq('time_range', timeRange)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error) throw error;
+
+    // If no insights exist, generate them
+    if (!data || data.length === 0) {
+      return await generateProductivityInsights(timeRange);
+    }
+
+    return data[0].insights || [];
+  } catch (error) {
+    console.error('Error fetching productivity insights:', error);
+    throw error;
+  }
+};
+
+/**
+ * Generate and store productivity insights based on analytics data
+ */
+export const generateProductivityInsights = async (timeRange: TimeRange): Promise<ProductivityInsight[]> => {
+  try {
+    // Fetch all the necessary analytics data
+    const [dailyAnalytics, moodAnalytics, categoryAnalytics, weeklyAnalytics] = await Promise.all([
+      fetchDailyAnalytics(timeRange),
+      fetchMoodAnalytics2(timeRange),
+      fetchCategoryAnalytics(timeRange),
+      fetchWeeklyAnalytics(timeRange)
+    ]);
+
+    // Generate insights based on the data
+    const insights = await analyzeDataForInsights(
+      dailyAnalytics,
+      moodAnalytics,
+      categoryAnalytics,
+      weeklyAnalytics,
+      timeRange
+    );
+
+    // Store the insights in the database
+    const { data, error } = await supabase
+      .from('productivity_insights')
+      .upsert({
+        time_range: timeRange,
+        insights,
+        updated_at: new Date().toISOString()
+      })
+      .select();
+
+    if (error) throw error;
+
+    return insights;
+  } catch (error) {
+    console.error('Error generating productivity insights:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch weekly analytics from the analytics_weekly table
+ */
+export const fetchWeeklyAnalytics = async (timeRange: TimeRange): Promise<WeeklyAnalytics[]> => {
+  try {
+    let query = supabase
+      .from('analytics_weekly')
+      .select('*')
+      .order('week_start', { ascending: false });
+
+    // Apply time range filter if not 'all'
+    if (timeRange !== 'all') {
+      const days = parseInt(timeRange.replace('days', ''));
+      const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+      query = query.gte('week_start', startDate);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching weekly analytics:', error);
+    throw error;
+  }
+};
+
+/**
+ * Analyze data to generate productivity insights
+ */
+const analyzeDataForInsights = async (
+  dailyAnalytics: DailyAnalytics[],
+  moodAnalytics: MoodAnalytics[],
+  categoryAnalytics: CategoryAnalytics[],
+  weeklyAnalytics: WeeklyAnalytics[],
+  timeRange: TimeRange
+): Promise<ProductivityInsight[]> => {
+  const insights: ProductivityInsight[] = [];
+
+  // If we don't have enough data, return a default message
+  if (dailyAnalytics.length === 0) {
+    return [
+      {
+        text: "We don't have enough data to generate insights yet. Complete more tasks to see personalized productivity patterns.",
+        type: 'general'
+      }
+    ];
+  }
+
+  // 1. Find most productive day of the week
+  const dayProductivity: Record<string, { total: number; completed: number }> = {
+    'Sunday': { total: 0, completed: 0 },
+    'Monday': { total: 0, completed: 0 },
+    'Tuesday': { total: 0, completed: 0 },
+    'Wednesday': { total: 0, completed: 0 },
+    'Thursday': { total: 0, completed: 0 },
+    'Friday': { total: 0, completed: 0 },
+    'Saturday': { total: 0, completed: 0 }
+  };
+
+  dailyAnalytics.forEach(day => {
+    const date = parseISO(day.date);
+    const dayName = format(date, 'EEEE');
+
+    dayProductivity[dayName].total += day.total_tasks;
+    dayProductivity[dayName].completed += day.completed_tasks;
+  });
+
+  let mostProductiveDay = '';
+  let highestCompletionRate = 0;
+
+  Object.entries(dayProductivity).forEach(([day, stats]) => {
+    if (stats.total >= 3) { // Only consider days with at least 3 tasks
+      const rate = stats.completed / stats.total;
+      if (rate > highestCompletionRate) {
+        highestCompletionRate = rate;
+        mostProductiveDay = day;
+      }
+    }
+  });
+
+  if (mostProductiveDay) {
+    const completionPercentage = Math.round(highestCompletionRate * 100);
+    insights.push({
+      text: `You're most productive on ${mostProductiveDay} with a ${completionPercentage}% task completion rate.`,
+      type: 'time',
+      recommendation: `Try scheduling your most important tasks on ${mostProductiveDay} to leverage your natural productivity peak.`
+    });
+  }
+
+  // 2. Find most common mood and its correlation with productivity
+  const moodProductivity: Record<string, { count: number; completionRate: number }> = {};
+
+  moodAnalytics.forEach(mood => {
+    if (!moodProductivity[mood.mood_name]) {
+      moodProductivity[mood.mood_name] = { count: 0, completionRate: 0 };
+    }
+
+    moodProductivity[mood.mood_name].count += mood.task_count;
+    // Update the running average
+    const currentTotal = moodProductivity[mood.mood_name].completionRate *
+                        (moodProductivity[mood.mood_name].count - mood.task_count);
+    moodProductivity[mood.mood_name].completionRate =
+      (currentTotal + (mood.completion_rate * mood.task_count)) / moodProductivity[mood.mood_name].count;
+  });
+
+  let mostCommonMood = '';
+  let highestMoodCount = 0;
+  let mostProductiveMood = '';
+  let highestMoodProductivity = 0;
+
+  Object.entries(moodProductivity).forEach(([mood, stats]) => {
+    if (stats.count > highestMoodCount) {
+      highestMoodCount = stats.count;
+      mostCommonMood = mood;
+    }
+
+    if (stats.count >= 3 && stats.completionRate > highestMoodProductivity) {
+      highestMoodProductivity = stats.completionRate;
+      mostProductiveMood = mood;
+    }
+  });
+
+  if (mostCommonMood) {
+    const productivityLevel = moodProductivity[mostCommonMood].completionRate >= 70 ? 'higher' :
+                             moodProductivity[mostCommonMood].completionRate >= 50 ? 'moderate' : 'lower';
+
+    insights.push({
+      text: `Your most common mood is ${mostCommonMood}, which correlates with ${productivityLevel} productivity.`,
+      type: 'mood',
+      recommendation: mostProductiveMood !== mostCommonMood ?
+        `Try activities that promote a "${mostProductiveMood}" mood before starting important tasks.` :
+        `Continue with activities that maintain your "${mostCommonMood}" mood for optimal productivity.`
+    });
+  }
+
+  // 3. Find average tasks completed per day
+  const totalDays = dailyAnalytics.length;
+  const totalCompletedTasks = dailyAnalytics.reduce((sum, day) => sum + day.completed_tasks, 0);
+  const avgTasksPerDay = totalDays > 0 ? Math.round((totalCompletedTasks / totalDays) * 10) / 10 : 0;
+
+  if (avgTasksPerDay > 0) {
+    insights.push({
+      text: `You complete an average of ${avgTasksPerDay} tasks per day.`,
+      type: 'productivity',
+      recommendation: avgTasksPerDay < 3 ?
+        'Try breaking down larger tasks into smaller, more manageable steps to increase your daily completion count.' :
+        'Your daily task completion rate is good. Consider setting specific time blocks for focused work to maintain this momentum.'
+    });
+  }
+
+  // 4. Find most frequent task category and its completion rate
+  const categoryStats: Record<string, { count: number; completed: number }> = {};
+
+  categoryAnalytics.forEach(cat => {
+    if (!categoryStats[cat.category]) {
+      categoryStats[cat.category] = { count: 0, completed: 0 };
+    }
+
+    categoryStats[cat.category].count += cat.task_count;
+    categoryStats[cat.category].completed += Math.round((cat.task_count * cat.completion_rate) / 100);
+  });
+
+  let mostFrequentCategory = '';
+  let highestCategoryCount = 0;
+  let mostCompletedCategory = '';
+  let highestCompletionCount = 0;
+
+  Object.entries(categoryStats).forEach(([category, stats]) => {
+    if (stats.count > highestCategoryCount) {
+      highestCategoryCount = stats.count;
+      mostFrequentCategory = category;
+    }
+
+    if (stats.count >= 3) {
+      const completionRate = stats.completed / stats.count;
+      if (completionRate > highestCompletionCount) {
+        highestCompletionCount = completionRate;
+        mostCompletedCategory = category;
+      }
+    }
+  });
+
+  if (mostFrequentCategory) {
+    const categoryCompletionRate = categoryStats[mostFrequentCategory].count > 0 ?
+      Math.round((categoryStats[mostFrequentCategory].completed / categoryStats[mostFrequentCategory].count) * 100) : 0;
+
+    insights.push({
+      text: `Your most frequent task category is "${mostFrequentCategory}" with a ${categoryCompletionRate}% completion rate.`,
+      type: 'category',
+      recommendation: mostCompletedCategory !== mostFrequentCategory && mostCompletedCategory ?
+        `You excel at completing "${mostCompletedCategory}" tasks. Consider applying similar strategies to your "${mostFrequentCategory}" tasks.` :
+        `You're doing well with your "${mostFrequentCategory}" tasks. Keep up the good work!`
+    });
+  }
+
+  // 5. Find time of day patterns if available
+  if (dailyAnalytics.some(day => day.most_productive_hour !== null && day.most_productive_hour !== undefined)) {
+    const hourCounts: Record<number, number> = {};
+
+    dailyAnalytics.forEach(day => {
+      if (day.most_productive_hour !== null && day.most_productive_hour !== undefined) {
+        hourCounts[day.most_productive_hour] = (hourCounts[day.most_productive_hour] || 0) + 1;
+      }
+    });
+
+    let mostProductiveHour = -1;
+    let highestHourCount = 0;
+
+    Object.entries(hourCounts).forEach(([hour, count]) => {
+      if (count > highestHourCount) {
+        highestHourCount = count;
+        mostProductiveHour = parseInt(hour);
+      }
+    });
+
+    if (mostProductiveHour >= 0) {
+      const timeOfDay = mostProductiveHour < 12 ? 'morning' :
+                       mostProductiveHour < 17 ? 'afternoon' : 'evening';
+      const formattedHour = format(new Date().setHours(mostProductiveHour, 0, 0, 0), 'h a');
+
+      insights.push({
+        text: `You tend to be most productive in the ${timeOfDay}, particularly around ${formattedHour}.`,
+        type: 'time',
+        recommendation: `Schedule your most challenging tasks during the ${timeOfDay} to leverage your natural energy peaks.`
+      });
+    }
+  }
+
+  // Limit to 5 insights maximum
+  return insights.slice(0, 5);
 };

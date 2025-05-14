@@ -13,13 +13,15 @@ import {
   fetchCategoryAnalytics,
   DailyAnalytics,
   MoodAnalytics,
-  CategoryAnalytics
+  CategoryAnalytics,
+  ProductivityInsight
 } from '../services/analytics';
 import TaskCompletionChart from '../components/analytics/TaskCompletionChart';
 import ProductivityTrendChart from '../components/analytics/ProductivityTrendChart';
 import MoodCorrelationChart from '../components/analytics/MoodCorrelationChart';
 import CategoryDistributionChart from '../components/analytics/CategoryDistributionChart';
 import AnalyticsSummary from '../components/analytics/AnalyticsSummary';
+import ProductivityInsights from '../components/analytics/ProductivityInsights';
 
 type TimeRange = '7days' | '30days' | '90days' | 'all';
 
@@ -172,53 +174,14 @@ const AnalyticsPage = () => {
           </div>
 
           {/* Productivity Insights */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mt-6">
-            <h2 className="text-xl font-semibold mb-4">Productivity Insights</h2>
-            <div className="prose dark:prose-invert max-w-none">
-              <p>Based on your task completion patterns and mood data, here are some insights:</p>
-              <ul className="mt-2">
-                <li>You're most productive on {getMostProductiveDay(tasks)} with {getCompletionRateForDay(tasks, getMostProductiveDay(tasks))}% task completion rate.</li>
-                <li>Your most common mood is {getMostCommonMood(moods)}, which correlates with {getMoodProductivityCorrelation(tasks, moods)} productivity.</li>
-                <li>You complete {getAverageTasksPerDay(tasks, timeRange)} tasks per day on average.</li>
-                <li>Your most frequent task category is {getMostFrequentCategory(tasks)}.</li>
-              </ul>
-            </div>
-          </div>
+          <ProductivityInsights
+            timeRange={timeRange}
+            isLoading={loading}
+          />
         </>
       )}
     </ResponsiveContainer>
   );
-};
-
-// Helper functions for insights
-const getMostProductiveDay = (tasks: Task[]): string => {
-  // Placeholder implementation - will be replaced with actual logic
-  return 'Tuesday';
-};
-
-const getCompletionRateForDay = (tasks: Task[], day: string): number => {
-  // Placeholder implementation - will be replaced with actual logic
-  return 75;
-};
-
-const getMostCommonMood = (moods: Mood[]): string => {
-  // Placeholder implementation - will be replaced with actual logic
-  return 'Happy';
-};
-
-const getMoodProductivityCorrelation = (tasks: Task[], moods: Mood[]): string => {
-  // Placeholder implementation - will be replaced with actual logic
-  return 'higher';
-};
-
-const getAverageTasksPerDay = (tasks: Task[], timeRange: TimeRange): number => {
-  // Placeholder implementation - will be replaced with actual logic
-  return 3;
-};
-
-const getMostFrequentCategory = (tasks: Task[]): string => {
-  // Placeholder implementation - will be replaced with actual logic
-  return 'Work';
 };
 
 export default AnalyticsPage;
