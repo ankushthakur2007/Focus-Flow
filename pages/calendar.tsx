@@ -154,6 +154,9 @@ export default function Calendar() {
     const startDate = startOfWeek(monthStart, { weekStartsOn: 0 }); // Start week on Sunday
     const endDate = endOfWeek(monthEnd, { weekStartsOn: 0 });
 
+    console.log('Rendering month view for:', monthStart, 'to', monthEnd);
+    console.log('Events available for month view:', events.length);
+
     const dateFormat = 'EEE';
     const days = [];
     let day = startDate;
@@ -174,10 +177,23 @@ export default function Calendar() {
       const isCurrentMonth = isSameMonth(day, currentDate);
       const isCurrentDay = isToday(day);
 
-      // Find events for this day
-      const dayEvents = events.filter(event =>
-        isSameDay(parseISO(event.start_time), day)
-      );
+      // Find events for this day - include events that:
+      // 1. Start on this day, OR
+      // 2. End on this day, OR
+      // 3. Span across this day (start before and end after)
+      const dayStart = new Date(day);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(day);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const dayEvents = events.filter(event => {
+        const eventStartTime = parseISO(event.start_time);
+        const eventEndTime = parseISO(event.end_time);
+
+        return isSameDay(eventStartTime, day) ||
+               isSameDay(eventEndTime, day) ||
+               (eventStartTime < dayStart && eventEndTime > dayEnd);
+      });
 
       days.push(
         <div
@@ -193,7 +209,7 @@ export default function Calendar() {
             </span>
           </div>
           <div className="overflow-y-auto max-h-[80px]">
-            {dayEvents.map(event => (
+            {dayEvents.length > 0 && dayEvents.map(event => (
               <div
                 key={event.id}
                 className="text-xs mb-1 p-1 rounded truncate cursor-pointer"
@@ -203,7 +219,10 @@ export default function Calendar() {
                   handleEventClick(event);
                 }}
               >
-                {format(parseISO(event.start_time), 'h:mm a')} {event.title}
+                <span className="font-semibold">{event.title}</span>
+                <span className="ml-1 text-xs opacity-90">
+                  {format(parseISO(event.start_time), 'h:mm')}
+                </span>
               </div>
             ))}
           </div>
@@ -285,11 +304,18 @@ export default function Calendar() {
           const eventStartTime = parseISO(event.start_time);
           const eventEndTime = parseISO(event.end_time);
           const eventStartMs = eventStartTime.getTime();
+          const eventEndMs = eventEndTime.getTime();
 
-          // Check if the event starts in this hour slot AND on this day
-          return eventStartMs >= startTime &&
-                 eventStartMs < endTime &&
-                 isSameDay(eventStartTime, currentDay);
+          // An event should appear in this slot if:
+          // 1. It starts during this hour on this day, OR
+          // 2. It's ongoing during this hour on this day
+          return (
+            isSameDay(eventStartTime, currentDay) &&
+            (
+              (eventStartMs >= startTime && eventStartMs < endTime) ||
+              (eventStartMs < startTime && eventEndMs > startTime)
+            )
+          );
         });
 
         hourRow.push(
@@ -302,24 +328,29 @@ export default function Calendar() {
               handleDateClick(date);
             }}
           >
-            {slotEvents.map(event => (
-              <div
-                key={event.id}
-                className="absolute inset-x-0 mx-1 p-1 rounded text-xs truncate cursor-pointer text-white"
-                style={{
-                  backgroundColor: event.color || '#3b82f6',
-                  top: `${(parseISO(event.start_time).getMinutes() / 60) * 100}%`,
-                  height: '50px',
-                  zIndex: 10
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEventClick(event);
-                }}
-              >
-                {format(parseISO(event.start_time), 'h:mm a')} {event.title}
+            {slotEvents.length > 0 && (
+              <div className="p-1">
+                {slotEvents.map(event => (
+                  <div
+                    key={event.id}
+                    className="mb-1 p-1 rounded text-xs text-white cursor-pointer overflow-hidden"
+                    style={{
+                      backgroundColor: event.color || '#3b82f6',
+                      zIndex: 10
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEventClick(event);
+                    }}
+                  >
+                    <div className="font-semibold truncate">{event.title}</div>
+                    <div className="text-xs opacity-90 truncate">
+                      {format(parseISO(event.start_time), 'h:mm')}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         );
       }
@@ -405,24 +436,29 @@ export default function Calendar() {
               handleDateClick(date);
             }}
           >
-            {slotEvents.map(event => (
-              <div
-                key={event.id}
-                className="absolute inset-x-0 mx-2 p-2 rounded text-white text-sm cursor-pointer"
-                style={{
-                  backgroundColor: event.color || '#3b82f6',
-                  top: `${(parseISO(event.start_time).getMinutes() / 60) * 100}%`,
-                  height: '50px',
-                  zIndex: 10
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEventClick(event);
-                }}
-              >
-                {format(parseISO(event.start_time), 'h:mm a')} {event.title}
+            {slotEvents.length > 0 && (
+              <div className="p-1">
+                {slotEvents.map(event => (
+                  <div
+                    key={event.id}
+                    className="mb-1 p-2 rounded text-white text-sm cursor-pointer overflow-hidden"
+                    style={{
+                      backgroundColor: event.color || '#3b82f6',
+                      zIndex: 10
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEventClick(event);
+                    }}
+                  >
+                    <div className="font-semibold">{event.title}</div>
+                    <div className="text-xs opacity-90">
+                      {format(parseISO(event.start_time), 'h:mm a')} - {format(parseISO(event.end_time), 'h:mm a')}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         </div>
       );
