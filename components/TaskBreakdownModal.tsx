@@ -352,7 +352,10 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
       }
 
       // 2. Update modified steps
-      for (const stepId of modifiedStepIds) {
+      // Convert Set to Array before iterating
+      const modifiedStepIdsArray = Array.from(modifiedStepIds);
+
+      for (const stepId of modifiedStepIdsArray) {
         // Check if the step still exists in tempSteps
         const stepToUpdate = tempSteps.find(step => step.id === stepId);
 
