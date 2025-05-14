@@ -16,6 +16,12 @@ export interface ProductivityInsight {
   recommendation?: string;
 }
 
+// Define interface for insights data with timestamp
+export interface InsightsData {
+  insights: ProductivityInsight[];
+  lastGeneratedAt: string;
+}
+
 // Define interfaces for analytics data
 export interface DailyAnalytics {
   id: string;
@@ -517,9 +523,9 @@ export const getMostProductiveDay = (tasks: Task[]): string => {
 };
 
 /**
- * Fetch productivity insights from the database
+ * Fetch productivity insights from the database without generating new ones
  */
-export const fetchProductivityInsights = async (timeRange: TimeRange): Promise<ProductivityInsight[]> => {
+export const fetchProductivityInsights = async (timeRange: TimeRange): Promise<InsightsData | null> => {
   try {
     const { data, error } = await supabase
       .from('productivity_insights')
@@ -530,29 +536,30 @@ export const fetchProductivityInsights = async (timeRange: TimeRange): Promise<P
 
     // Check for permission errors or table not existing
     if (error) {
-      console.warn('Error fetching productivity insights, will try to generate instead:', error);
-      // If there's an error (like table doesn't exist or permissions issue),
-      // fall back to generating insights
-      return await generateProductivityInsights(timeRange);
+      console.warn('Error fetching productivity insights:', error);
+      return null;
     }
 
-    // If no insights exist, generate them
+    // If no insights exist, return null (don't generate new ones)
     if (!data || data.length === 0) {
-      return await generateProductivityInsights(timeRange);
+      return null;
     }
 
-    return data[0].insights || [];
+    // Return the insights with the last generated timestamp
+    return {
+      insights: data[0].insights || [],
+      lastGeneratedAt: data[0].updated_at || data[0].created_at
+    };
   } catch (error) {
     console.error('Error in fetchProductivityInsights:', error);
-    // If there's any error, try to generate insights as a fallback
-    return await generateProductivityInsights(timeRange);
+    return null;
   }
 };
 
 /**
  * Generate and store productivity insights based on analytics data
  */
-export const generateProductivityInsights = async (timeRange: TimeRange): Promise<ProductivityInsight[]> => {
+export const generateProductivityInsights = async (timeRange: TimeRange): Promise<InsightsData> => {
   try {
     // Fetch all the necessary analytics data
     const [dailyAnalytics, moodAnalytics, categoryAnalytics, weeklyAnalytics] = await Promise.all([
@@ -571,6 +578,10 @@ export const generateProductivityInsights = async (timeRange: TimeRange): Promis
       timeRange
     );
 
+    // Current timestamp for when insights were generated
+    const now = new Date().toISOString();
+    let lastGeneratedAt = now;
+
     try {
       // Get the current user
       const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -586,13 +597,15 @@ export const generateProductivityInsights = async (timeRange: TimeRange): Promis
             user_id: userData.user.id,
             time_range: timeRange,
             insights,
-            updated_at: new Date().toISOString()
+            updated_at: now
           })
           .select();
 
         if (error) {
           console.warn('Could not save insights to database:', error);
           // Continue even if saving fails - we'll just return the generated insights
+        } else if (data && data.length > 0) {
+          lastGeneratedAt = data[0].updated_at || now;
         }
       }
     } catch (dbError) {
@@ -600,7 +613,10 @@ export const generateProductivityInsights = async (timeRange: TimeRange): Promis
       // Continue even if saving fails - we'll just return the generated insights
     }
 
-    return insights;
+    return {
+      insights,
+      lastGeneratedAt
+    };
   } catch (error) {
     console.error('Error generating productivity insights:', error);
     throw error;

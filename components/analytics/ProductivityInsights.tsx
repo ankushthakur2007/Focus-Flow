@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { ArrowPathIcon as RefreshIcon } from '@heroicons/react/24/outline';
-import { LightBulbIcon, ClockIcon, ChartBarIcon, TagIcon, FaceSmileIcon as EmojiHappyIcon } from '@heroicons/react/24/solid';
-import { fetchProductivityInsights, generateProductivityInsights, ProductivityInsight } from '../../services/analytics';
+import { LightBulbIcon, ClockIcon, ChartBarIcon, TagIcon, FaceSmileIcon as EmojiHappyIcon, ClockIcon as TimeIcon } from '@heroicons/react/24/solid';
+import { fetchProductivityInsights, generateProductivityInsights, ProductivityInsight, InsightsData } from '../../services/analytics';
+import { format, parseISO, formatDistanceToNow } from 'date-fns';
 
 // Import the TimeRange type from analytics.ts
 type TimeRange = '7days' | '30days' | '90days' | 'all';
@@ -13,6 +14,7 @@ interface ProductivityInsightsProps {
 
 const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({ timeRange, isLoading }) => {
   const [insights, setInsights] = useState<ProductivityInsight[]>([]);
+  const [lastGeneratedAt, setLastGeneratedAt] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,18 +24,19 @@ const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({ timeRange, 
     const loadInsights = async () => {
       try {
         setError(null);
+        // Only fetch existing insights from the database, don't generate new ones
         const data = await fetchProductivityInsights(timeRange);
-        setInsights(data);
+
+        if (data && data.insights) {
+          setInsights(data.insights);
+          setLastGeneratedAt(data.lastGeneratedAt || null);
+        } else {
+          setInsights([]);
+          setLastGeneratedAt(null);
+        }
       } catch (err) {
         console.error('Error loading productivity insights:', err);
-        // Try to generate insights if fetching fails (likely because table doesn't exist yet)
-        try {
-          const generatedData = await generateProductivityInsights(timeRange);
-          setInsights(generatedData);
-        } catch (genErr) {
-          console.error('Error generating productivity insights:', genErr);
-          setError('Failed to generate insights. Please try again later.');
-        }
+        setError('Failed to load insights. Please try again later.');
       }
     };
 
@@ -44,8 +47,13 @@ const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({ timeRange, 
     try {
       setRefreshing(true);
       setError(null);
+      // Explicitly generate new insights
       const data = await generateProductivityInsights(timeRange);
-      setInsights(data);
+
+      if (data && data.insights) {
+        setInsights(data.insights);
+        setLastGeneratedAt(data.lastGeneratedAt || null);
+      }
     } catch (err) {
       console.error('Error generating productivity insights:', err);
       setError('Failed to generate new insights');
@@ -70,6 +78,11 @@ const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({ timeRange, 
     }
   };
 
+  // Format the last generated timestamp
+  const formattedLastGenerated = lastGeneratedAt
+    ? `Last updated ${formatDistanceToNow(parseISO(lastGeneratedAt), { addSuffix: true })}`
+    : null;
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mt-6">
       <div className="flex justify-between items-center mb-4">
@@ -85,6 +98,14 @@ const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({ timeRange, 
         </button>
       </div>
 
+      {/* Last updated timestamp */}
+      {formattedLastGenerated && (
+        <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-4">
+          <TimeIcon className="h-4 w-4 mr-1.5" />
+          {formattedLastGenerated}
+        </div>
+      )}
+
       {error ? (
         <div className="bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 p-4 rounded-md">
           {error}
@@ -93,7 +114,11 @@ const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({ timeRange, 
         <div className="flex flex-col items-center justify-center py-8 text-gray-500 dark:text-gray-400">
           <LightBulbIcon className="h-12 w-12 mb-3 text-gray-300 dark:text-gray-600" />
           <p className="mb-2">No insights available yet</p>
-          <p className="text-sm">Complete more tasks to generate personalized insights</p>
+          <p className="text-sm">
+            {lastGeneratedAt
+              ? 'Click "Refresh Insights" to generate new personalized insights'
+              : 'Complete more tasks to generate personalized insights'}
+          </p>
         </div>
       ) : (
         <div className="prose dark:prose-invert max-w-none">
