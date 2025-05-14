@@ -364,7 +364,8 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
             task.status === 'in_progress' ? 'badge-primary' :
             task.status === 'completed' ? 'badge-success' : 'badge-primary'
           }`}>
-            {task.status.replace('_', ' ').charAt(0).toUpperCase() + task.status.replace('_', ' ').slice(1)}
+            {task.status === 'in_progress' ? 'In progress' :
+             task.status.replace('_', ' ').charAt(0).toUpperCase() + task.status.replace('_', ' ').slice(1)}
           </span>
           <button
             onClick={() => setExpanded(!expanded)}
@@ -494,7 +495,7 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
                 aria-label="Change task status"
               >
                 <option value="pending">Pending</option>
-                <option value="in_progress">In Progress</option>
+                <option value="in_progress">In progress</option>
                 <option value="completed">Completed</option>
               </select>
             </div>
