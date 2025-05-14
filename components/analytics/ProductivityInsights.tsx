@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { RefreshIcon } from '@heroicons/react/outline';
-import { LightBulbIcon, ClockIcon, ChartBarIcon, TagIcon, EmojiHappyIcon } from '@heroicons/react/solid';
+import { ArrowPathIcon as RefreshIcon } from '@heroicons/react/24/outline';
+import { LightBulbIcon, ClockIcon, ChartBarIcon, TagIcon, FaceSmileIcon as EmojiHappyIcon } from '@heroicons/react/24/solid';
 import { fetchProductivityInsights, generateProductivityInsights, ProductivityInsight } from '../../services/analytics';
 
 interface ProductivityInsightsProps {
@@ -15,7 +15,7 @@ const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({ timeRange, 
 
   useEffect(() => {
     if (isLoading) return;
-    
+
     const loadInsights = async () => {
       try {
         setError(null);
@@ -92,8 +92,8 @@ const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({ timeRange, 
           </p>
           <div className="space-y-4">
             {insights.map((insight, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className="flex items-start p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-700"
               >
                 <div className="flex-shrink-0 mr-3 mt-0.5">
