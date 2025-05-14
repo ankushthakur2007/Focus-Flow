@@ -32,23 +32,43 @@ const CalendarEventModal = ({ event, date, onClose, onSave, onDelete }: Calendar
 
       const start = new Date(event.start_time);
 
-      // If the event has a related task, try to get the start date from it
+      // If the event has a related task, try to get both start_date and due_date from it
       if (event.related_task_id) {
         const fetchTaskData = async () => {
           const { data } = await supabase
             .from('tasks')
-            .select('start_date')
+            .select('start_date, due_date')
             .eq('id', event.related_task_id)
             .single();
 
-          if (data && data.start_date) {
-            const taskStartDate = new Date(data.start_date);
-            setStartDate(format(taskStartDate, 'yyyy-MM-dd'));
-            setStartTime(format(taskStartDate, 'HH:mm'));
+          if (data) {
+            // Set start date if available
+            if (data.start_date) {
+              const taskStartDate = new Date(data.start_date);
+              setStartDate(format(taskStartDate, 'yyyy-MM-dd'));
+              setStartTime(format(taskStartDate, 'HH:mm'));
+            } else {
+              // Default to event start time if no task start date
+              setStartDate(format(start, 'yyyy-MM-dd'));
+              setStartTime(format(start, 'HH:mm'));
+            }
+
+            // Set due date if available
+            if (data.due_date) {
+              const taskDueDate = new Date(data.due_date);
+              setDueDate(format(taskDueDate, 'yyyy-MM-dd'));
+              setDueTime(format(taskDueDate, 'HH:mm'));
+            } else {
+              // Default to event start time if no task due date
+              setDueDate(format(start, 'yyyy-MM-dd'));
+              setDueTime(format(start, 'HH:mm'));
+            }
           } else {
-            // Default to event start time if no task start date
+            // Default to event start time if no task data
             setStartDate(format(start, 'yyyy-MM-dd'));
             setStartTime(format(start, 'HH:mm'));
+            setDueDate(format(start, 'yyyy-MM-dd'));
+            setDueTime(format(start, 'HH:mm'));
           }
         };
 
@@ -57,10 +77,9 @@ const CalendarEventModal = ({ event, date, onClose, onSave, onDelete }: Calendar
         // Default to event start time if no related task
         setStartDate(format(start, 'yyyy-MM-dd'));
         setStartTime(format(start, 'HH:mm'));
+        setDueDate(format(start, 'yyyy-MM-dd'));
+        setDueTime(format(start, 'HH:mm'));
       }
-
-      setDueDate(format(start, 'yyyy-MM-dd'));
-      setDueTime(format(start, 'HH:mm'));
 
       // Set priority based on color
       if (event.color) {
@@ -138,8 +157,9 @@ const CalendarEventModal = ({ event, date, onClose, onSave, onDelete }: Calendar
 
       if (taskError) throw taskError;
 
-      // Also create calendar event for visualization
-      // Use start date if provided, otherwise use due date
+      // The calendar event will be created automatically by the database trigger
+      // We don't need to create it manually here, but we need to return something to update the UI
+      // For UI update purposes, use the same logic as the trigger
       const eventStartDateTime = startDateTime || dueDateTime;
       const endDateTime = new Date(eventStartDateTime);
       endDateTime.setHours(eventStartDateTime.getHours() + 1);
