@@ -20,12 +20,55 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
   );
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // Ensure notification settings are properly initialized
+  useEffect(() => {
+    const initializeNotificationSettings = async () => {
+      if (!user) return;
+
+      // If notification_settings is undefined or notifications_enabled is undefined, initialize it
+      if (!task.notification_settings || task.notification_settings.notifications_enabled === undefined) {
+        console.log('Initializing notification settings for task:', task.id);
+
+        const defaultSettings = {
+          custom_reminder: false,
+          reminder_time: 24,
+          reminder_sent: false,
+          notifications_enabled: true
+        };
+
+        try {
+          const { error } = await supabase
+            .from('tasks')
+            .update({
+              notification_settings: defaultSettings
+            })
+            .eq('id', task.id);
+
+          if (error) {
+            console.error('Error initializing notification settings:', error);
+            return;
+          }
+
+          // Update the task object
+          task.notification_settings = defaultSettings;
+          setNotificationsEnabled(true);
+        } catch (error) {
+          console.error('Failed to initialize notification settings:', error);
+        }
+      }
+    };
+
+    initializeNotificationSettings();
+  }, [task.id, user]);
+
   // Update notification settings in the database
   const toggleNotifications = async (enabled: boolean) => {
     if (!user || isUpdating) return;
 
     try {
       setIsUpdating(true);
+      console.log('Current task notification settings:', task.notification_settings);
+      console.log('Attempting to set notifications to:', enabled);
 
       // Get current notification settings or use default
       const currentSettings = task.notification_settings || {
@@ -41,22 +84,32 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
         notifications_enabled: enabled
       };
 
+      console.log('Updated settings to be saved:', updatedSettings);
+
       // Update in database
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('tasks')
         .update({
           notification_settings: updatedSettings
         })
-        .eq('id', task.id);
+        .eq('id', task.id)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
-      // Update local state
+      console.log('Database update response:', data);
+
+      // Update local state and task object
       setNotificationsEnabled(enabled);
+      task.notification_settings = updatedSettings;
     } catch (error) {
       console.error('Error updating notification settings:', error);
       // Revert UI state if update failed
       setNotificationsEnabled(!enabled);
+      alert('Failed to update notification settings. Please try again.');
     } finally {
       setIsUpdating(false);
     }
@@ -200,7 +253,7 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
 
           {/* Notification Toggle */}
           <div className="mt-3 flex items-center">
-            <label htmlFor={`notification-toggle-${task.id}`} className="flex items-center cursor-pointer">
+            <label htmlFor={`notification-toggle-${task.id}`} className={`flex items-center ${isUpdating ? 'cursor-wait opacity-70' : 'cursor-pointer'}`}>
               <div className="relative">
                 <input
                   id={`notification-toggle-${task.id}`}
@@ -213,8 +266,18 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
                 <div className={`block w-10 h-6 rounded-full ${notificationsEnabled ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'} transition-colors duration-300`}></div>
                 <div className={`absolute left-1 top-1 bg-white dark:bg-gray-200 w-4 h-4 rounded-full transition-transform duration-300 ${notificationsEnabled ? 'transform translate-x-4' : ''}`}></div>
               </div>
-              <div className="ml-3 text-sm text-gray-700 dark:text-gray-300">
-                {isUpdating ? 'Updating...' : 'Enable notifications'}
+              <div className="ml-3 text-sm text-gray-700 dark:text-gray-300 flex items-center">
+                {isUpdating ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Updating...
+                  </>
+                ) : (
+                  'Enable notifications'
+                )}
               </div>
             </label>
           </div>

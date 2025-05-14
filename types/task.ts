@@ -15,7 +15,7 @@ export interface Task {
     custom_reminder: boolean;
     reminder_time: number;
     reminder_sent: boolean;
-    notifications_enabled?: boolean;
+    notifications_enabled: boolean;
   };
 }
 
