@@ -21,6 +21,7 @@ export interface Task {
     notifications_enabled: boolean;
   };
   steps?: TaskStep[]; // Optional array of steps
+  task_steps?: TaskStep[]; // Optional array of steps from Supabase join
 }
 
 export interface TaskShare {
