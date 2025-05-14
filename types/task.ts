@@ -13,6 +13,7 @@ export interface Task {
   updated_at?: string;
   is_shared?: boolean;
   shared_by?: string;
+  steps_finalized?: boolean; // Flag to indicate if steps are finalized
   notification_settings?: {
     custom_reminder: boolean;
     reminder_time: number;

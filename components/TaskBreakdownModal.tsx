@@ -4,6 +4,7 @@ import { supabase } from '../services/supabase';
 import AuthContext from './AuthContext';
 import { getTaskStepSuggestions, getTaskSpecificQuestions } from '../services/gemini';
 import TouchFriendlyButton from './TouchFriendlyButton';
+import { AlertCircle } from 'lucide-react';
 
 interface TaskBreakdownModalProps {
   task: Task;
@@ -275,6 +276,22 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
         console.error('Error refreshing task progress:', refreshError);
       }
 
+      // Mark steps as finalized
+      const { error: finalizeError } = await supabase
+        .from('tasks')
+        .update({
+          steps_finalized: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', task.id);
+
+      if (finalizeError) {
+        console.error('Error finalizing steps:', finalizeError);
+      } else {
+        // Update the local task state
+        task.steps_finalized = true;
+      }
+
       // Notify parent component
       onUpdate();
     } catch (err: any) {
@@ -287,6 +304,39 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
   const discardAISteps = () => {
     setAiGeneratedSteps([]);
     setShowAIResults(false);
+  };
+
+  // Finalize steps for this task
+  const finalizeSteps = async () => {
+    if (!user) {
+      setError('User not authenticated. Please sign in to use this feature.');
+      return;
+    }
+
+    try {
+      // Update the task to mark steps as finalized
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          steps_finalized: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', task.id);
+
+      if (error) throw error;
+
+      // Update the local task state
+      task.steps_finalized = true;
+
+      // Notify parent component
+      onUpdate();
+
+      // Show success message
+      setError(null);
+    } catch (err: any) {
+      console.error('Error finalizing steps:', err);
+      setError(err.message);
+    }
   };
 
   return (
@@ -465,8 +515,27 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
             </div>
           )}
 
+          {/* Steps Finalized Message */}
+          {task.steps_finalized && !showAIForm && !showAIResults && (
+            <div className="border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 rounded-md p-4 mb-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 text-green-500 dark:text-green-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-green-800 dark:text-green-300">Steps Finalized</h3>
+                  <div className="mt-1 text-sm text-green-700 dark:text-green-400">
+                    <p>The steps for this task have been finalized. You can no longer add or modify steps.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Manual Step Addition */}
-          {!showAIForm && !showAIResults && (
+          {!showAIForm && !showAIResults && !task.steps_finalized && (
             <div className="border border-gray-200 dark:border-gray-700 rounded-md p-4">
               <h3 className="font-medium mb-3">Add New Step</h3>
 
@@ -498,7 +567,7 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
                 />
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
                 <TouchFriendlyButton
                   onClick={handleAddStep}
                   disabled={!newStepTitle.trim()}
@@ -506,6 +575,14 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
                 >
                   Add Step
                 </TouchFriendlyButton>
+                {steps.length > 0 && (
+                  <TouchFriendlyButton
+                    onClick={finalizeSteps}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  >
+                    Done
+                  </TouchFriendlyButton>
+                )}
               </div>
             </div>
           )}
@@ -519,7 +596,7 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
             Close
           </TouchFriendlyButton>
 
-          {!showAIForm && !showAIResults && (
+          {!showAIForm && !showAIResults && !task.steps_finalized && (
             <TouchFriendlyButton
               onClick={startAIGeneration}
               disabled={isGeneratingAI}
@@ -542,6 +619,12 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
                 </>
               )}
             </TouchFriendlyButton>
+          )}
+          {!showAIForm && !showAIResults && task.steps_finalized && (
+            <div className="text-gray-500 dark:text-gray-400 flex items-center">
+              <AlertCircle className="h-5 w-5 mr-2" />
+              <span>Steps are finalized</span>
+            </div>
           )}
         </div>
       </div>
