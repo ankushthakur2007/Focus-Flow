@@ -198,8 +198,9 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
         const updatedTask = JSON.parse(JSON.stringify(updatedTaskData));
 
         // Update the task object with the new data
+        // Use type assertion to tell TypeScript that the keys are valid for Task
         Object.keys(updatedTask).forEach(key => {
-          task[key] = updatedTask[key];
+          (task as any)[key] = updatedTask[key];
         });
 
         console.log('Task object after update:', task);
