@@ -274,8 +274,8 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-soft hover:shadow-card-hover border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 hover:-translate-y-1 animate-fade-in">
-      {/* Task Breakdown Modal */}
+    <>
+      {/* Task Breakdown Modal - Rendered outside the card */}
       {showBreakdownModal && (
         <TaskBreakdownModal
           task={task}
@@ -283,6 +283,8 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
           onUpdate={handleTaskUpdate}
         />
       )}
+
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-soft hover:shadow-card-hover border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 hover:-translate-y-1 animate-fade-in">
 
       {/* Card Header */}
       <div className="p-5 flex flex-col sm:flex-row justify-between items-start gap-3">
@@ -562,6 +564,7 @@ const TaskCard = ({ task, onStatusChange, onDelete }: TaskCardProps) => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

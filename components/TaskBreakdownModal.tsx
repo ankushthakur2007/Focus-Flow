@@ -556,13 +556,13 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Task Breakdown: {task.title}</h2>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col relative">
+        <div className="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h2 className="text-xl font-bold bg-gradient-to-r from-primary-500 to-primary-600 bg-clip-text text-transparent">Task Breakdown: {task.title}</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300"
             aria-label="Close"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -600,14 +600,18 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
           {/* Task Progress */}
           <div className="mb-6">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="font-medium">Progress</h3>
-              <span className="text-sm font-medium">
+              <h3 className="font-medium text-gray-800 dark:text-gray-200">Progress</h3>
+              <span className="text-sm font-medium bg-gradient-to-r from-primary-500 to-primary-600 bg-clip-text text-transparent">
                 {task.progress || 0}% Complete
               </span>
             </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 shadow-inner">
               <div
-                className="bg-primary-600 h-2.5 rounded-full"
+                className={`h-3 rounded-full transition-all duration-500 ease-out bg-gradient-to-r ${
+                  task.progress < 30 ? 'from-danger-400 to-danger-600' :
+                  task.progress < 70 ? 'from-warning-400 to-warning-600' :
+                  'from-success-400 to-success-600'
+                }`}
                 style={{ width: `${task.progress || 0}%` }}
               ></div>
             </div>
@@ -772,11 +776,11 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
 
           {/* Manual Step Addition */}
           {!showAIForm && !showAIResults && !task.steps_finalized && (
-            <div className="border border-gray-200 dark:border-gray-700 rounded-md p-4">
-              <h3 className="font-medium mb-3">Add New Step</h3>
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-5 bg-white dark:bg-gray-800 shadow-sm">
+              <h3 className="font-medium mb-4 text-gray-800 dark:text-gray-200">Add New Step</h3>
 
               <div className="mb-4">
-                <label htmlFor="stepTitle" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="stepTitle" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Step Title
                 </label>
                 <input
@@ -784,30 +788,30 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
                   id="stepTitle"
                   value={newStepTitle}
                   onChange={(e) => setNewStepTitle(e.target.value)}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
                   placeholder="Enter step title"
                 />
               </div>
 
-              <div className="mb-4">
-                <label htmlFor="stepDescription" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <div className="mb-5">
+                <label htmlFor="stepDescription" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Description (optional)
                 </label>
                 <textarea
                   id="stepDescription"
                   value={newStepDescription}
                   onChange={(e) => setNewStepDescription(e.target.value)}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                  rows={2}
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
+                  rows={3}
                   placeholder="Enter step description"
                 />
               </div>
 
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-wrap justify-end gap-3">
                 <TouchFriendlyButton
                   onClick={handleAddStep}
                   disabled={!newStepTitle.trim() || isSaving}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
+                  className="px-5 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:shadow-md hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 transition-all duration-300 active:shadow-inner active:scale-95"
                 >
                   Add Step
                 </TouchFriendlyButton>
@@ -816,14 +820,14 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
                     <TouchFriendlyButton
                       onClick={saveChanges}
                       disabled={isSaving || !hasUnsavedChanges}
-                      className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 disabled:opacity-50"
+                      className="px-5 py-2.5 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-xl hover:shadow-md hover:from-yellow-600 hover:to-yellow-700 disabled:opacity-50 transition-all duration-300 active:shadow-inner active:scale-95"
                     >
                       {isSaving ? 'Saving...' : 'Save Progress'}
                     </TouchFriendlyButton>
                     <TouchFriendlyButton
                       onClick={finalizeSteps}
                       disabled={isSaving}
-                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+                      className="px-5 py-2.5 bg-gradient-to-r from-success-500 to-success-600 text-white rounded-xl hover:shadow-md hover:from-success-600 hover:to-success-700 disabled:opacity-50 transition-all duration-300 active:shadow-inner active:scale-95"
                     >
                       Done
                     </TouchFriendlyButton>
@@ -834,10 +838,10 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
           )}
         </div>
 
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+        <div className="p-5 border-t border-gray-200 dark:border-gray-700 flex justify-between">
           <TouchFriendlyButton
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 hover:shadow-sm active:shadow-inner active:scale-95"
           >
             Close
           </TouchFriendlyButton>
@@ -846,7 +850,7 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
             <TouchFriendlyButton
               onClick={startAIGeneration}
               disabled={isGeneratingAI}
-              className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 flex items-center disabled:opacity-50"
+              className="px-5 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:shadow-md hover:from-primary-600 hover:to-primary-700 flex items-center disabled:opacity-50 transition-all duration-300 active:shadow-inner active:scale-95"
             >
               {isGeneratingAI ? (
                 <span className="flex items-center">
@@ -867,9 +871,9 @@ const TaskBreakdownModal = ({ task, onClose, onUpdate }: TaskBreakdownModalProps
             </TouchFriendlyButton>
           )}
           {!showAIForm && !showAIResults && task.steps_finalized && (
-            <div className="text-gray-500 dark:text-gray-400 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <div className="text-gray-500 dark:text-gray-400 flex items-center bg-gray-50 dark:bg-gray-700/50 px-4 py-2 rounded-xl">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-success-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span>Steps are finalized</span>
             </div>
