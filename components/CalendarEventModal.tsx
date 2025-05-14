@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { CalendarEvent } from '../types/calendar';
 import { Task } from '../types/task';
-import { format } from 'date-fns';
+import { format, isAfter, parseISO } from 'date-fns';
 import { supabase } from '../services/supabase';
 
 interface CalendarEventModalProps {
@@ -15,11 +15,14 @@ interface CalendarEventModalProps {
 const CalendarEventModal = ({ event, date, onClose, onSave, onDelete }: CalendarEventModalProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [startTime, setStartTime] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('');
   const [priority, setPriority] = useState('medium');
   const [category, setCategory] = useState('other');
   const [color, setColor] = useState('#3b82f6'); // Default blue color
+  const [dateError, setDateError] = useState('');
 
   useEffect(() => {
     if (event) {
@@ -28,6 +31,33 @@ const CalendarEventModal = ({ event, date, onClose, onSave, onDelete }: Calendar
       setDescription(event.description || '');
 
       const start = new Date(event.start_time);
+
+      // If the event has a related task, try to get the start date from it
+      if (event.related_task_id) {
+        const fetchTaskData = async () => {
+          const { data } = await supabase
+            .from('tasks')
+            .select('start_date')
+            .eq('id', event.related_task_id)
+            .single();
+
+          if (data && data.start_date) {
+            const taskStartDate = new Date(data.start_date);
+            setStartDate(format(taskStartDate, 'yyyy-MM-dd'));
+            setStartTime(format(taskStartDate, 'HH:mm'));
+          } else {
+            // Default to event start time if no task start date
+            setStartDate(format(start, 'yyyy-MM-dd'));
+            setStartTime(format(start, 'HH:mm'));
+          }
+        };
+
+        fetchTaskData();
+      } else {
+        // Default to event start time if no related task
+        setStartDate(format(start, 'yyyy-MM-dd'));
+        setStartTime(format(start, 'HH:mm'));
+      }
 
       setDueDate(format(start, 'yyyy-MM-dd'));
       setDueTime(format(start, 'HH:mm'));
@@ -42,17 +72,51 @@ const CalendarEventModal = ({ event, date, onClose, onSave, onDelete }: Calendar
       setColor(event.color || '#3b82f6');
     } else if (date) {
       // Creating new task
+      // Default start date to now
+      const now = new Date();
+      setStartDate(format(now, 'yyyy-MM-dd'));
+      setStartTime(format(now, 'HH:mm'));
+
+      // Set due date to the clicked date
       setDueDate(format(date, 'yyyy-MM-dd'));
       setDueTime(format(date, 'HH:mm'));
     }
   }, [event, date]);
 
-  // Function to create a task with due date in the tasks table and visualize it in the calendar view
+  // Validate dates when they change
+  useEffect(() => {
+    if (startDate && startTime && dueDate && dueTime) {
+      const startDateTime = new Date(`${startDate}T${startTime}`);
+      const dueDateTime = new Date(`${dueDate}T${dueTime}`);
+
+      if (isAfter(startDateTime, dueDateTime)) {
+        setDateError('Start date cannot be after due date');
+      } else {
+        setDateError('');
+      }
+    } else {
+      setDateError('');
+    }
+  }, [startDate, startTime, dueDate, dueTime]);
+
+  // Function to create a task with start and due dates in the tasks table and visualize it in the calendar view
   const createTask = async () => {
     try {
+      // Validate dates before submission
+      if (startDate && startTime && dueDate && dueTime) {
+        const startDateTime = new Date(`${startDate}T${startTime}`);
+        const dueDateTime = new Date(`${dueDate}T${dueTime}`);
+
+        if (isAfter(startDateTime, dueDateTime)) {
+          setDateError('Start date cannot be after due date');
+          return;
+        }
+      }
+
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
 
+      const startDateTime = startDate && startTime ? new Date(`${startDate}T${startTime}`) : null;
       const dueDateTime = new Date(`${dueDate}T${dueTime}`);
 
       // Create task
@@ -65,6 +129,7 @@ const CalendarEventModal = ({ event, date, onClose, onSave, onDelete }: Calendar
           category,
           status: 'pending',
           user_id: userData.user.id,
+          start_date: startDateTime ? startDateTime.toISOString() : null,
           due_date: dueDateTime.toISOString(),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -74,14 +139,15 @@ const CalendarEventModal = ({ event, date, onClose, onSave, onDelete }: Calendar
       if (taskError) throw taskError;
 
       // Also create calendar event for visualization
-      const startDateTime = new Date(`${dueDate}T${dueTime}`);
-      const endDateTime = new Date(startDateTime);
-      endDateTime.setHours(startDateTime.getHours() + 1);
+      // Use start date if provided, otherwise use due date
+      const eventStartDateTime = startDateTime || dueDateTime;
+      const endDateTime = new Date(eventStartDateTime);
+      endDateTime.setHours(eventStartDateTime.getHours() + 1);
 
       onSave({
         title,
         description,
-        start_time: startDateTime.toISOString(),
+        start_time: eventStartDateTime.toISOString(),
         end_time: endDateTime.toISOString(),
         all_day: false,
         color: getPriorityColor(priority),
@@ -95,20 +161,55 @@ const CalendarEventModal = ({ event, date, onClose, onSave, onDelete }: Calendar
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate dates before submission
+    if (startDate && startTime && dueDate && dueTime) {
+      const startDateTime = new Date(`${startDate}T${startTime}`);
+      const dueDateTime = new Date(`${dueDate}T${dueTime}`);
+
+      if (isAfter(startDateTime, dueDateTime)) {
+        setDateError('Start date cannot be after due date');
+        return;
+      }
+    }
+
     if (event) {
       // Editing existing event
-      const startDateTime = new Date(`${dueDate}T${dueTime}`);
-      const endDateTime = new Date(startDateTime);
-      endDateTime.setHours(startDateTime.getHours() + 1);
+      // Use start date if provided, otherwise use due date
+      const eventStartDateTime = startDate && startTime
+        ? new Date(`${startDate}T${startTime}`)
+        : new Date(`${dueDate}T${dueTime}`);
+
+      const endDateTime = new Date(eventStartDateTime);
+      endDateTime.setHours(eventStartDateTime.getHours() + 1);
 
       onSave({
         title,
         description,
-        start_time: startDateTime.toISOString(),
+        start_time: eventStartDateTime.toISOString(),
         end_time: endDateTime.toISOString(),
         all_day: false,
         color: getPriorityColor(priority)
       });
+
+      // If this event has a related task, update the task's start and due dates
+      if (event.related_task_id) {
+        const updateTask = async () => {
+          try {
+            await supabase
+              .from('tasks')
+              .update({
+                start_date: startDate && startTime ? new Date(`${startDate}T${startTime}`).toISOString() : null,
+                due_date: new Date(`${dueDate}T${dueTime}`).toISOString(),
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', event.related_task_id);
+          } catch (error) {
+            console.error('Error updating task:', error);
+          }
+        };
+
+        updateTask();
+      }
     } else {
       // Creating new task
       createTask();
@@ -178,6 +279,35 @@ const CalendarEventModal = ({ event, date, onClose, onSave, onDelete }: Calendar
 
             <div className="flex flex-wrap -mx-2 mb-4">
               <div className="w-1/2 px-2 mb-4">
+                <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Start Date (Optional)
+                </label>
+                <input
+                  type="date"
+                  id="startDate"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">When will you start working on this task?</p>
+              </div>
+
+              <div className="w-1/2 px-2 mb-4">
+                <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Start Time
+                </label>
+                <input
+                  type="time"
+                  id="startTime"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap -mx-2 mb-4">
+              <div className="w-1/2 px-2 mb-4">
                 <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Due Date
                 </label>
@@ -189,6 +319,7 @@ const CalendarEventModal = ({ event, date, onClose, onSave, onDelete }: Calendar
                   className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   required
                 />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">When does this task need to be completed?</p>
               </div>
 
               <div className="w-1/2 px-2 mb-4">
@@ -205,6 +336,12 @@ const CalendarEventModal = ({ event, date, onClose, onSave, onDelete }: Calendar
                 />
               </div>
             </div>
+
+            {dateError && (
+              <div className="mb-4 px-2">
+                <p className="text-red-500 text-sm">{dateError}</p>
+              </div>
+            )}
 
             <div className="flex flex-wrap -mx-2 mb-4">
               <div className="w-1/2 px-2 mb-4">
