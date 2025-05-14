@@ -26,7 +26,14 @@ const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({ timeRange, 
         setInsights(data);
       } catch (err) {
         console.error('Error loading productivity insights:', err);
-        setError('Failed to load productivity insights');
+        // Try to generate insights if fetching fails (likely because table doesn't exist yet)
+        try {
+          const generatedData = await generateProductivityInsights(timeRange);
+          setInsights(generatedData);
+        } catch (genErr) {
+          console.error('Error generating productivity insights:', genErr);
+          setError('Failed to generate insights. Please try again later.');
+        }
       }
     };
 

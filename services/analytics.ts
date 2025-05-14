@@ -519,7 +519,13 @@ export const fetchProductivityInsights = async (timeRange: TimeRange): Promise<P
       .order('created_at', { ascending: false })
       .limit(1);
 
-    if (error) throw error;
+    // Check for permission errors or table not existing
+    if (error) {
+      console.warn('Error fetching productivity insights, will try to generate instead:', error);
+      // If there's an error (like table doesn't exist or permissions issue),
+      // fall back to generating insights
+      return await generateProductivityInsights(timeRange);
+    }
 
     // If no insights exist, generate them
     if (!data || data.length === 0) {
@@ -528,8 +534,9 @@ export const fetchProductivityInsights = async (timeRange: TimeRange): Promise<P
 
     return data[0].insights || [];
   } catch (error) {
-    console.error('Error fetching productivity insights:', error);
-    throw error;
+    console.error('Error in fetchProductivityInsights:', error);
+    // If there's any error, try to generate insights as a fallback
+    return await generateProductivityInsights(timeRange);
   }
 };
 
@@ -555,17 +562,34 @@ export const generateProductivityInsights = async (timeRange: TimeRange): Promis
       timeRange
     );
 
-    // Store the insights in the database
-    const { data, error } = await supabase
-      .from('productivity_insights')
-      .upsert({
-        time_range: timeRange,
-        insights,
-        updated_at: new Date().toISOString()
-      })
-      .select();
+    try {
+      // Get the current user
+      const { data: userData, error: userError } = await supabase.auth.getUser();
 
-    if (error) throw error;
+      if (userError) {
+        console.warn('Could not get current user:', userError);
+        // Continue even if we can't get the user - we'll just return the generated insights
+      } else {
+        // Try to store the insights in the database
+        const { data, error } = await supabase
+          .from('productivity_insights')
+          .upsert({
+            user_id: userData.user.id,
+            time_range: timeRange,
+            insights,
+            updated_at: new Date().toISOString()
+          })
+          .select();
+
+        if (error) {
+          console.warn('Could not save insights to database:', error);
+          // Continue even if saving fails - we'll just return the generated insights
+        }
+      }
+    } catch (dbError) {
+      console.warn('Database error when saving insights:', dbError);
+      // Continue even if saving fails - we'll just return the generated insights
+    }
 
     return insights;
   } catch (error) {
