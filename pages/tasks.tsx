@@ -116,6 +116,7 @@ const TasksPage = () => {
     description: string,
     priority: string,
     category: string,
+    startDate?: string,
     dueDate?: string
   ) => {
     if (!user) return;
@@ -131,6 +132,7 @@ const TasksPage = () => {
           category,
           status: 'pending',
           user_id: user.id,
+          start_date: startDate,
           due_date: dueDate,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),

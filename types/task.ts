@@ -6,6 +6,7 @@ export interface Task {
   priority: 'high' | 'medium' | 'low';
   category: 'work' | 'study' | 'chores' | 'health' | 'social' | 'other';
   status: 'pending' | 'in_progress' | 'completed';
+  start_date?: string; // Optional start date for tasks
   due_date?: string; // Optional due date for tasks
   created_at: string;
   updated_at?: string;

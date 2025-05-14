@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   priority TEXT CHECK (priority IN ('high', 'medium', 'low')) DEFAULT 'medium',
   category TEXT CHECK (category IN ('work', 'study', 'chores', 'health', 'social', 'other')) DEFAULT 'other',
   status TEXT CHECK (status IN ('pending', 'in_progress', 'completed')) DEFAULT 'pending',
+  start_date TIMESTAMP WITH TIME ZONE,
   due_date TIMESTAMP WITH TIME ZONE,
   notification_settings JSONB DEFAULT '{
     "custom_reminder": false,
@@ -216,6 +217,8 @@ LEFT JOIN
 CREATE INDEX IF NOT EXISTS tasks_user_id_idx ON tasks (user_id);
 CREATE INDEX IF NOT EXISTS tasks_status_idx ON tasks (status);
 CREATE INDEX IF NOT EXISTS tasks_created_at_idx ON tasks (created_at);
+CREATE INDEX IF NOT EXISTS tasks_start_date_idx ON tasks (start_date);
+CREATE INDEX IF NOT EXISTS tasks_due_date_idx ON tasks (due_date);
 CREATE INDEX IF NOT EXISTS moods_user_id_idx ON moods (user_id);
 CREATE INDEX IF NOT EXISTS moods_timestamp_idx ON moods (timestamp);
 CREATE INDEX IF NOT EXISTS recommendations_user_id_idx ON recommendations (user_id);
