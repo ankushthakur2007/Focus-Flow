@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import TouchFriendlyButton from './TouchFriendlyButton';
+import TouchFriendlyButton from '../../ui/TouchFriendlyButton';
 import { format } from 'date-fns';
 
 interface TaskFormProps {

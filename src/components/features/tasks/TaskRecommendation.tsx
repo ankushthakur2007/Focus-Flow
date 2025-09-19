@@ -1,11 +1,11 @@
 import { useState, useEffect, useContext } from 'react';
-import { supabase } from '../services/supabase';
-import { Recommendation } from '../types/recommendation';
-import AuthContext from './AuthContext';
+import { supabase } from '../../../lib/services/supabase';
+import { Recommendation } from '../../../lib/types/recommendation';
+import AuthContext from '../auth/AuthContext';
 import { format, parseISO } from 'date-fns';
-import ErrorBoundary from './ErrorBoundary';
-import { getTaskRecommendation } from '../services/gemini';
-import { Task } from '../types/task';
+import ErrorBoundary from '../../ui/ErrorBoundary';
+import { getTaskRecommendation } from '../../../lib/services/gemini';
+import { Task } from '../../../lib/types/task';
 
 interface TaskRecommendationProps {
   taskId: string;

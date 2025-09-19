@@ -8,7 +8,7 @@ interface RecommendationResponse {
   mood_tip: string;
 }
 
-export const getRecommendation = async (
+export const getOllamaRecommendation = async (
   tasks: Task[],
   currentMood: string
 ): Promise<RecommendationResponse> => {
@@ -105,7 +105,7 @@ If there are no tasks, suggest creating a new task based on the user's mood.
 `;
 };
 
-export const getTaskRecommendation = async (
+export const getOllamaTaskRecommendation = async (
   task: Task,
   currentMood: string
 ): Promise<RecommendationResponse> => {

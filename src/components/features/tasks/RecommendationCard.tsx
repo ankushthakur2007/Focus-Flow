@@ -1,7 +1,7 @@
-import { Recommendation } from '../types/recommendation';
+import { Recommendation } from '../../../lib/types/recommendation';
 import { format, parseISO } from 'date-fns';
 import { useState } from 'react';
-import TouchFriendlyButton from './TouchFriendlyButton';
+import TouchFriendlyButton from '../../ui/TouchFriendlyButton';
 
 interface RecommendationCardProps {
   recommendation: Recommendation;

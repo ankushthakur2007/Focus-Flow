@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { Task } from '../../types/task';
-import { Mood } from '../../types/mood';
-import { calculateProductivityByMood, MoodAnalytics } from '../../services/analytics';
+import { Task } from '../../../lib/types/task';
+import { Mood } from '../../../lib/types/mood';
+import { calculateProductivityByMood, MoodAnalytics } from '../../../lib/services/analytics';
 
 interface MoodCorrelationChartProps {
   tasks: Task[];

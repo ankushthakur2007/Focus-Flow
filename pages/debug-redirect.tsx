@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
-import Layout from '../components/Layout';
+import Layout from '../src/components/layout/Layout';
 
 export default function DebugRedirect() {
   const [redirectUri, setRedirectUri] = useState('');

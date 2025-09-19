@@ -1,6 +1,6 @@
-import { Task } from '../../types/task';
-import { Mood } from '../../types/mood';
-import { calculateCompletionRate, DailyAnalytics } from '../../services/analytics';
+import { Task } from '../../../lib/types/task';
+import { Mood } from '../../../lib/types/mood';
+import { calculateCompletionRate, DailyAnalytics } from '../../../lib/services/analytics';
 
 interface AnalyticsSummaryProps {
   tasks: Task[];

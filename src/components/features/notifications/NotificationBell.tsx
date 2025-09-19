@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useContext } from 'react';
-import { getUnreadCount, fetchNotifications, markAsRead, markAllAsRead, subscribeToNotifications } from '../services/notifications';
-import { Notification } from '../types/notification';
-import AuthContext from './AuthContext';
+import { getUnreadCount, fetchNotifications, markAsRead, markAllAsRead, subscribeToNotifications } from '../../../lib/services/notifications';
+import { Notification } from '../../../lib/types/notification';
+import AuthContext from '../auth/AuthContext';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
 import Link from 'next/link';
 

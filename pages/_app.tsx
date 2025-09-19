@@ -1,13 +1,13 @@
 import '../styles/globals.css';
 import type { AppProps } from 'next/app';
 import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '../services/supabase';
-import Layout from '../components/Layout';
-import AuthContext from '../components/AuthContext';
-import { ThemeProvider } from '../components/ThemeContext';
+import { supabase } from '../src/lib/services/supabase';
+import Layout from '../src/components/layout/Layout';
+import AuthContext from '../src/components/features/auth/AuthContext';
+import { ThemeProvider } from '../src/components/layout/ThemeContext';
 import { Session, User } from '@supabase/supabase-js';
 import Head from 'next/head';
-import ErrorBoundary from '../components/ErrorBoundary';
+import ErrorBoundary from '../src/components/ui/ErrorBoundary';
 
 function MyApp({ Component, pageProps }: AppProps) {
   const [user, setUser] = useState<User | null>(null);

@@ -1,4 +1,4 @@
-import { ChatMessage as ChatMessageType } from '../types/chat';
+import { ChatMessage as ChatMessageType } from '../../../lib/types/chat';
 import { format, parseISO } from 'date-fns';
 import { useState, useEffect } from 'react';
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Task } from '../../types/task';
-import { groupTasksByCategory, CategoryAnalytics } from '../../services/analytics';
+import { Task } from '../../../lib/types/task';
+import { groupTasksByCategory, CategoryAnalytics } from '../../../lib/services/analytics';
 
 interface CategoryDistributionChartProps {
   tasks: Task[];

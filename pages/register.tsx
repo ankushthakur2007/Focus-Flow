@@ -1,8 +1,8 @@
 import { useState, useContext, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import AuthContext from '../components/AuthContext';
-import { registerUser, signInWithGoogle, signInWithGitHub } from '../services/auth';
+import AuthContext from '../src/components/features/auth/AuthContext';
+import { registerUser, signInWithGoogle, signInWithGitHub } from '../src/lib/services/auth';
 
 const Register = () => {
   const [email, setEmail] = useState('');

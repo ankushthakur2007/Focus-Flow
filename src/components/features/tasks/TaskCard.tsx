@@ -1,8 +1,8 @@
 import { useState, useContext } from 'react';
-import { Task } from '../types/task';
+import { Task } from '../../../lib/types/task';
 import { format, parseISO } from 'date-fns';
 import TaskRecommendation from './TaskRecommendation';
-import AuthContext from './AuthContext';
+import AuthContext from '../auth/AuthContext';
 
 interface TaskCardProps {
   task: Task;

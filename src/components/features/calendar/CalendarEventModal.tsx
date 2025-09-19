@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CalendarEvent } from '../types/calendar';
+import { CalendarEvent } from '../../../lib/types/calendar';
 import { format } from 'date-fns';
 
 interface CalendarEventModalProps {

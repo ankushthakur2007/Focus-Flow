@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../services/supabase';
+import { supabase } from '../../lib/services/supabase';
 import { User } from '@supabase/supabase-js';
 
 interface ThemeContextType {

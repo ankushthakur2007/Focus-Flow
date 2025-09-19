@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Task } from '../../types/task';
-import { DailyAnalytics } from '../../services/analytics';
+import { Task } from '../../../lib/types/task';
+import { DailyAnalytics } from '../../../lib/services/analytics';
 
 interface TaskCompletionChartProps {
   tasks: Task[];

@@ -1,4 +1,4 @@
-import { Task } from '../types/task';
+import { Task } from '../../../lib/types/task';
 import { format, parseISO } from 'date-fns';
 import TaskRecommendation from './TaskRecommendation';
 

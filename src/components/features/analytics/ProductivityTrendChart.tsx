@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { Task } from '../../types/task';
+import { Task } from '../../../lib/types/task';
 import { format, subDays, parseISO } from 'date-fns';
-import { groupTasksByDay, calculateDailyCompletionRates, DailyAnalytics } from '../../services/analytics';
+import { groupTasksByDay, calculateDailyCompletionRates, DailyAnalytics } from '../../../lib/services/analytics';
 
 interface ProductivityTrendChartProps {
   tasks: Task[];
