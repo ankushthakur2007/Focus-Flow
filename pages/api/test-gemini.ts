@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { GEMINI_API_KEY } from '../../config/api-keys';
+import { GEMINI_API_KEY } from '../../src/lib/config/api-keys';
 
 type ResponseData = {
   message: string;

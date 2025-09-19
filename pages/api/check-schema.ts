@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../services/supabase';
+import { supabase } from '../../src/lib/services/supabase';
 
 type ResponseData = {
   message: string;

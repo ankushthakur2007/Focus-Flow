@@ -1,9 +1,9 @@
 import { useState, useEffect, useContext } from 'react';
-import { supabase } from '../services/supabase';
-import AuthContext from '../components/AuthContext';
-import ResponsiveContainer from '../components/ResponsiveContainer';
-import { Task } from '../types/task';
-import { Mood } from '../types/mood';
+import { supabase } from '../src/lib/services/supabase';
+import AuthContext from '../src/components/features/auth/AuthContext';
+import ResponsiveContainer from '../src/components/ui/ResponsiveContainer';
+import { Task } from '../src/lib/types/task';
+import { Mood } from '../src/lib/types/mood';
 import { format, subDays, startOfWeek, endOfWeek, eachDayOfInterval, parseISO, isWithinInterval } from 'date-fns';
 import {
   fetchTaskAnalytics,
@@ -14,12 +14,12 @@ import {
   DailyAnalytics,
   MoodAnalytics,
   CategoryAnalytics
-} from '../services/analytics';
-import TaskCompletionChart from '../components/analytics/TaskCompletionChart';
-import ProductivityTrendChart from '../components/analytics/ProductivityTrendChart';
-import MoodCorrelationChart from '../components/analytics/MoodCorrelationChart';
-import CategoryDistributionChart from '../components/analytics/CategoryDistributionChart';
-import AnalyticsSummary from '../components/analytics/AnalyticsSummary';
+} from '../src/lib/services/analytics';
+import TaskCompletionChart from '../src/components/features/analytics/TaskCompletionChart';
+import ProductivityTrendChart from '../src/components/features/analytics/ProductivityTrendChart';
+import MoodCorrelationChart from '../src/components/features/analytics/MoodCorrelationChart';
+import CategoryDistributionChart from '../src/components/features/analytics/CategoryDistributionChart';
+import AnalyticsSummary from '../src/components/features/analytics/AnalyticsSummary';
 
 type TimeRange = '7days' | '30days' | '90days' | 'all';
 

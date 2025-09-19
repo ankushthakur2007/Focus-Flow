@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef, useContext } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { supabase } from '../../services/supabase';
-import { getChatHistory, sendMessage } from '../../services/chat';
-import { Task } from '../../types/task';
-import { ChatMessage as ChatMessageType } from '../../types/chat';
-import ChatMessage from '../../components/ChatMessage';
-import ChatInput from '../../components/ChatInput';
-import AuthContext from '../../components/AuthContext';
+import { supabase } from '../../src/lib/services/supabase';
+import { getChatHistory, sendMessage } from '../../src/lib/services/chat';
+import { Task } from '../../src/lib/types/task';
+import { ChatMessage as ChatMessageType } from '../../src/lib/types/chat';
+import ChatMessage from '../../src/components/features/chat/ChatMessage';
+import ChatInput from '../../src/components/features/chat/ChatInput';
+import AuthContext from '../../src/components/features/auth/AuthContext';
 
 const ChatPage = () => {
   const router = useRouter();

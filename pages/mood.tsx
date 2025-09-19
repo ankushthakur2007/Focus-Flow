@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
-import { supabase } from '../services/supabase';
-import AuthContext from '../components/AuthContext';
-import { Mood } from '../types/mood';
+import { supabase } from '../src/lib/services/supabase';
+import AuthContext from '../src/components/features/auth/AuthContext';
+import { Mood } from '../src/lib/types/mood';
 import { format, parseISO } from 'date-fns';
 
 const moods = [

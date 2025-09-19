@@ -1,8 +1,8 @@
 import { useState, useEffect, useContext } from 'react';
-import { supabase } from '../services/supabase';
-import AuthContext from '../components/AuthContext';
-import { useTheme } from '../components/ThemeContext';
-import { logoutUser } from '../services/auth';
+import { supabase } from '../src/lib/services/supabase';
+import AuthContext from '../src/components/features/auth/AuthContext';
+import { useTheme } from '../src/components/layout/ThemeContext';
+import { logoutUser } from '../src/lib/services/auth';
 import { useRouter } from 'next/router';
 
 const ProfilePage = () => {

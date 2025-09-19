@@ -1,7 +1,7 @@
 import type { NextPage } from 'next';
 import { useContext, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import AuthContext from '../components/AuthContext';
+import AuthContext from '../src/components/features/auth/AuthContext';
 import TasksPage from './tasks';
 
 const Home: NextPage = () => {

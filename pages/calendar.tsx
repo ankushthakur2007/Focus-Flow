@@ -1,13 +1,13 @@
 import { useState, useEffect, useContext } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import AuthContext from '../components/AuthContext';
-import Layout from '../components/Layout';
-import { fetchMonthEvents, fetchWeekEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '../services/calendar-events';
-import { CalendarEvent } from '../types/calendar';
+import AuthContext from '../src/components/features/auth/AuthContext';
+import Layout from '../src/components/layout/Layout';
+import { fetchMonthEvents, fetchWeekEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '../src/lib/services/calendar-events';
+import { CalendarEvent } from '../src/lib/types/calendar';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths,
   parseISO, isSameDay, isSameMonth, isToday, getDay, getDate } from 'date-fns';
-import CalendarEventModal from '../components/CalendarEventModal';
+import CalendarEventModal from '../src/components/features/calendar/CalendarEventModal';
 
 type ViewMode = 'month' | 'week' | 'day';
 
