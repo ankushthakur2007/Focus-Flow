@@ -1,13 +1,13 @@
 import { useState, useEffect, useContext } from 'react';
-import { supabase } from '../services/supabase';
-import AuthContext from '../components/AuthContext';
-import { Task } from '../types/task';
-import { Mood } from '../types/mood';
-import { Recommendation } from '../types/recommendation';
-import { getRecommendation, getTaskRecommendation } from '../services/gemini';
-import RecommendationCard from '../components/RecommendationCard';
-import ResponsiveContainer from '../components/ResponsiveContainer';
-import TouchFriendlyButton from '../components/TouchFriendlyButton';
+import { supabase } from '../src/lib/services/supabase';
+import AuthContext from '../src/components/features/auth/AuthContext';
+import { Task } from '../src/lib/types/task';
+import { Mood } from '../src/lib/types/mood';
+import { Recommendation } from '../src/lib/types/recommendation';
+import { getRecommendation, getTaskRecommendation } from '../src/lib/services/gemini';
+import RecommendationCard from '../src/components/features/tasks/RecommendationCard';
+import ResponsiveContainer from '../src/components/ui/ResponsiveContainer';
+import TouchFriendlyButton from '../src/components/ui/TouchFriendlyButton';
 
 const PersonalizedPage = () => {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);

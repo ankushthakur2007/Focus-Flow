@@ -1,10 +1,10 @@
 import { useState, useEffect, useContext } from 'react';
-import { supabase } from '../services/supabase';
-import AuthContext from '../components/AuthContext';
-import TaskCard from '../components/TaskCard';
-import TaskForm from '../components/TaskForm';
-import { Task } from '../types/task';
-import { getTaskRecommendation } from '../services/gemini';
+import { supabase } from '../src/lib/services/supabase';
+import AuthContext from '../src/components/features/auth/AuthContext';
+import TaskCard from '../src/components/features/tasks/TaskCard';
+import TaskForm from '../src/components/features/tasks/TaskForm';
+import { Task } from '../src/lib/types/task';
+import { getTaskRecommendation } from '../src/lib/services/gemini';
 
 const TasksPage = () => {
   const [tasks, setTasks] = useState<Task[]>([]);

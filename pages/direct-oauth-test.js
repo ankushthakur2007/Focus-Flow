@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
-import Layout from '../components/Layout';
+import Layout from '../src/components/layout/Layout';
 
 export default function DirectOAuthTest() {
   const [clientId, setClientId] = useState('');
@@ -34,7 +34,7 @@ export default function DirectOAuthTest() {
   const handleSupabaseOAuth = async () => {
     try {
       // Import the supabase client
-      const { supabase } = await import('../services/supabase');
+      const { supabase } = await import('../src/lib/services/supabase');
       
       // Use Supabase's OAuth flow
       const { error } = await supabase.auth.signInWithOAuth({

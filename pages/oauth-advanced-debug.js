@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
-import Layout from '../components/Layout';
+import Layout from '../src/components/layout/Layout';
 
 export default function OAuthAdvancedDebug() {
   const [debugInfo, setDebugInfo] = useState({

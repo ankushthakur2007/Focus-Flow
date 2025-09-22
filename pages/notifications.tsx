@@ -1,10 +1,10 @@
 import { useState, useEffect, useContext } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import AuthContext from '../components/AuthContext';
-import Layout from '../components/Layout';
-import { fetchNotifications, markAsRead, markAllAsRead, deleteNotification } from '../services/notifications';
-import { Notification } from '../types/notification';
+import AuthContext from '../src/components/features/auth/AuthContext';
+import Layout from '../src/components/layout/Layout';
+import { fetchNotifications, markAsRead, markAllAsRead, deleteNotification } from '../src/lib/services/notifications';
+import { Notification } from '../src/lib/types/notification';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
 import Link from 'next/link';
 
